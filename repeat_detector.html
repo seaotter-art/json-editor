@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>반복 출력 감지 도구</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f4f0;
+  --surface: #ffffff;
+  --surface2: #f9f8f5;
+  --border: #e2e0d8;
+  --border2: #cbc9bf;
+  --text: #1a1917;
+  --text-muted: #6b6860;
+  --text-dim: #a09e97;
+  --accent: #5b47e0;
+  --accent-bg: #eeedfb;
+  --red: #d63b3b;
+  --red-bg: #fdf0f0;
+  --amber: #c47a00;
+  --amber-bg: #fdf5e6;
+  --green: #1e8a4c;
+  --green-bg: #edf7f1;
+  --mono: 'Courier New', monospace;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.page { max-width: 780px; margin: 0 auto; padding: 24px 16px 80px; }
+
+/* ── 헤더 ── */
+.header { margin-bottom: 24px; }
+.header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; }
+.header p { font-size: 0.875rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ── 카드 ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 14px;
+}
+
+/* ── 업로드 ── */
+.upload-zone {
+  border: 2px dashed var(--border2);
+  border-radius: 10px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.18s;
+  position: relative;
+  background: var(--surface2);
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.upload-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.upload-zone .icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+.upload-zone .label { font-size: 0.95rem; color: var(--text-muted); }
+.upload-zone .label strong { color: var(--accent); }
+.upload-zone .sub { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; }
+
+/* ── 설정 행 ── */
+.config-row {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; align-items: flex-end;
+}
+.config-item { display: flex; flex-direction: column; gap: 4px; }
+.config-item label { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
+.config-item .row { display: flex; align-items: center; gap: 6px; }
+.config-item span { font-size: 0.78rem; color: var(--text-dim); }
+
+input[type="number"] {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-size: 0.9rem;
+  padding: 6px 10px;
+  width: 64px;
+  outline: none;
+}
+input[type="number"]:focus { border-color: var(--accent); }
+
+input[type="range"] { accent-color: var(--accent); width: 100px; cursor: pointer; }
+
+/* ── 버튼 ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 9px 16px;
+  border: none; border-radius: 8px;
+  font-size: 0.875rem; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:hover { background: #4a38c4; }
+.btn-ghost { background: var(--surface2); color: var(--text-muted); border: 1.5px solid var(--border); }
+.btn-ghost:hover { background: var(--border); color: var(--text); }
+.btn-green { background: var(--green-bg); color: var(--green); border: 1.5px solid #b5dfc8; }
+.btn-green:hover { background: #d5eee0; }
+.btn-red { background: var(--red-bg); color: var(--red); border: 1.5px solid #f0c4c4; }
+.btn-red:hover { background: #fce0e0; }
+.btn-sm { padding: 5px 11px; font-size: 0.8rem; border-radius: 6px; }
+.btn-full { width: 100%; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── 통계 ── */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+@media (max-width: 480px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+.stat-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.stat-box .slabel { font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.stat-box .sval { font-size: 1.6rem; font-weight: 700; font-family: var(--mono); margin-top: 2px; }
+.sval.purple { color: var(--accent); }
+.sval.red { color: var(--red); }
+.sval.amber { color: var(--amber); }
+.sval.green { color: var(--green); }
+
+/* ── 툴바 ── */
+.toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.toolbar .right { margin-left: auto; display: flex; gap: 8px; }
+@media (max-width: 540px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar .right { margin-left: 0; }
+}
+
+/* ── 그룹 카드 ── */
+.group-list { display: flex; flex-direction: column; gap: 10px; }
+
+.group-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.group-card.resolved { border-color: #b5dfc8; }
+.group-card.resolved .group-header { background: var(--green-bg); }
+
+/* ── 그룹 헤더 ── */
+.group-header {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 13px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s;
+  background: var(--surface);
+}
+.group-header:hover { background: var(--surface2); }
+
+.rep-badge {
+  flex-shrink: 0;
+  font-size: 0.72rem; font-weight: 700;
+  padding: 3px 8px; border-radius: 20px;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+.rep-badge.few { background: var(--amber-bg); color: var(--amber); }
+.rep-badge.many { background: var(--red-bg); color: var(--red); }
+
+.group-header-info { flex: 1; min-width: 0; }
+.group-sentence { font-size: 0.9rem; color: var(--text); line-height: 1.5; word-break: break-all; }
+.group-submeta { font-size: 0.775rem; color: var(--text-dim); margin-top: 3px; }
+
+.toggle-arrow { flex-shrink: 0; color: var(--text-dim); font-size: 0.8rem; padding-top: 3px; transition: transform 0.18s; }
+.group-card.open .toggle-arrow { transform: rotate(180deg); }
+
+/* ── 그룹 상세 ── */
+.group-body { display: none; border-top: 1px solid var(--border); }
+.group-card.open .group-body { display: block; }
+
+/* ── 출현 목록 ── */
+.occurrences { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+.occ-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.occ-meta {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 6px 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.775rem;
+  color: var(--text-muted);
+}
+.role-pill {
+  font-size: 0.7rem; font-weight: 600; padding: 2px 7px; border-radius: 20px;
+}
+.role-pill.user { background: var(--accent-bg); color: var(--accent); }
+.role-pill.char { background: var(--amber-bg); color: var(--amber); }
+.role-pill.system { background: var(--green-bg); color: var(--green); }
+
+/* ── 개별 편집 토글 ── */
+.occ-toggle-btn {
+  margin-left: auto;
+  font-size: 0.75rem; font-weight: 600;
+  padding: 3px 9px; border-radius: 5px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.13s;
+  flex-shrink: 0;
+}
+.occ-toggle-btn:hover { background: var(--accent-bg); }
+
+.occ-preview {
+  padding: 9px 10px;
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 140px;
+  overflow-y: auto;
+}
+mark.hl { background: #fde68a; border-radius: 2px; color: #92400e; }
+
+/* ── 개별 편집 패널 ── */
+.occ-edit-panel {
+  display: none;
+  border-top: 1px solid var(--border);
+  padding: 10px;
+  background: #fffdf5;
+}
+.occ-edit-panel.visible { display: block; }
+.occ-edit-panel textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px solid var(--border2);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  padding: 8px 10px;
+  resize: vertical;
+  outline: none;
+  min-height: 80px;
+}
+.occ-edit-panel textarea:focus { border-color: var(--accent); }
+.occ-edit-actions { display: flex; gap: 7px; margin-top: 8px; flex-wrap: wrap; }
+
+/* ── 일괄 수정 패널 ── */
+.bulk-panel {
+  border-top: 1px solid var(--border);
+  padding: 14px;
+  background: var(--surface2);
+}
+.bulk-panel label {
+  font-size: 0.78rem; font-weight: 600;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em;
+  display: block; margin-bottom: 7px;
+}
+.bulk-panel textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px solid var(--border2);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  padding: 8px 10px;
+  resize: vertical;
+  outline: none;
+  min-height: 70px;
+}
+.bulk-panel textarea:focus { border-color: var(--accent); }
+.bulk-actions { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
+.apply-status { font-size: 0.8rem; color: var(--green); margin-top: 7px; font-weight: 500; min-height: 1.2em; }
+
+/* ── 빈 상태 ── */
+.empty { text-align: center; padding: 40px 16px; color: var(--text-dim); }
+.empty .eicon { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+.empty p { font-size: 0.9rem; }
+
+/* ── 스크롤바 ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── 하단 고정 다운로드 버튼 ── */
+.dl-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+  display: none;
+  z-index: 100;
+}
+.dl-bar-inner { max-width: 780px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+.dl-bar .info { font-size: 0.825rem; color: var(--text-muted); flex: 1; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="header">
+  <h1>🔍 반복 출력 감지 도구</h1>
+  <p>AI가 반복 출력으로 오염된 채팅 컨텍스트를 정리합니다</p>
+</div>
+
+<!-- 업로드 & 설정 -->
+<div class="card">
+  <div class="card-title">① 파일 업로드</div>
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" id="fileInput" accept=".json">
+    <span class="icon">📂</span>
+    <div class="label"><strong>JSON 파일 선택</strong> 또는 드래그</div>
+    <div class="sub">RisuAI 채팅 형식 (data.message 배열)</div>
+  </div>
+
+  <div class="config-row">
+    <div class="config-item">
+      <label>최소 반복 횟수</label>
+      <div class="row">
+        <input type="number" id="minRepeat" value="2" min="2" max="20">
+        <span>회 이상</span>
+      </div>
+    </div>
+    <div class="config-item">
+      <label>최소 문장 길이</label>
+      <div class="row">
+        <input type="number" id="minLength" value="10" min="3" max="200">
+        <span>자 이상</span>
+      </div>
+    </div>
+    <div class="config-item">
+      <label>유사도 &nbsp;<span id="simLabel" style="color:var(--accent);font-weight:700">85%</span></label>
+      <div class="row">
+        <input type="range" id="simSlider" min="70" max="100" value="85">
+      </div>
+    </div>
+    <button class="btn btn-accent" id="analyzeBtn" style="display:none;margin-top:6px" onclick="analyzeRepetitions()">🔎 분석 실행</button>
+  </div>
+</div>
+
+<!-- 결과 -->
+<div id="resultsSection" style="display:none">
+  <div class="stats-row">
+    <div class="stat-box"><div class="slabel">전체 메시지</div><div class="sval purple" id="statTotal">0</div></div>
+    <div class="stat-box"><div class="slabel">반복 그룹</div><div class="sval red" id="statGroups">0</div></div>
+    <div class="stat-box"><div class="slabel">오염 메시지</div><div class="sval amber" id="statAffected">0</div></div>
+    <div class="stat-box"><div class="slabel">처리 완료</div><div class="sval green" id="statResolved">0</div></div>
+  </div>
+
+  <div class="card" style="padding:14px 16px">
+    <div class="toolbar">
+      <div class="card-title" style="margin:0">② 반복 감지 결과</div>
+      <div class="right">
+        <button class="btn btn-ghost btn-sm" onclick="expandAll()">모두 펼치기</button>
+        <button class="btn btn-ghost btn-sm" onclick="collapseAll()">모두 접기</button>
+      </div>
+    </div>
+    <div class="group-list" id="groupList">
+      <div class="empty"><span class="eicon">✨</span><p>분석을 실행하세요.</p></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /page -->
+
+<!-- 하단 다운로드 바 -->
+<div class="dl-bar" id="dlBar">
+  <div class="dl-bar-inner">
+    <div class="info" id="dlInfo">수정 후 다운로드하세요.</div>
+    <button class="btn btn-green" onclick="downloadModified()">💾 수정본 다운로드</button>
+  </div>
+</div>
+
+<script>
+let chatData = null;
+let repetitionGroups = [];
+let resolvedCount = 0;
+
+const fileInput = document.getElementById('fileInput');
+const uploadZone = document.getElementById('uploadZone');
+const simSlider = document.getElementById('simSlider');
+const simLabel  = document.getElementById('simLabel');
+
+simSlider.addEventListener('input', () => { simLabel.textContent = simSlider.value + '%'; });
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+async function loadFile(file) {
+  try {
+    const text = await file.text();
+    const obj = JSON.parse(text);
+    if (!Array.isArray(obj?.data?.message)) throw new Error("'data.message' 배열을 찾을 수 없습니다.");
+    chatData = obj;
+    uploadZone.style.borderColor = 'var(--green)';
+    uploadZone.style.background = 'var(--green-bg)';
+    uploadZone.querySelector('.label').innerHTML = `<strong style="color:var(--green)">✅ ${file.name}</strong>`;
+    uploadZone.querySelector('.sub').textContent = `메시지 ${obj.data.message.length}개 로드됨`;
+    document.getElementById('analyzeBtn').style.display = 'inline-flex';
+    analyzeRepetitions();
+  } catch(e) { alert('파일 오류: ' + e.message); }
+}
+
+/* ─── 문장 분리 & 유사도 ─── */
+function tokenizeSentences(text, minLen) {
+  if (!text) return [];
+  const parts = text.split(/(?<=[.!?。！？])\s+|\n+/);
+  return parts.map(s => s.trim()).filter(s => s.length >= minLen);
+}
+
+function normSentence(s) {
+  return s.toLowerCase().replace(/[^\w가-힣ㄱ-ㅎㅏ-ㅣ\s]/g,'').replace(/\s+/g,' ').trim();
+}
+
+function similarity(a, b) {
+  if (a === b) return 1.0;
+  const la = a.length, lb = b.length;
+  if (!la || !lb) return 0;
+  if (Math.max(la,lb)/Math.min(la,lb) > 2.2) return 0;
+  const row = Array.from({length: la+1}, (_,i) => i);
+  for (let i = 1; i <= lb; i++) {
+    let prev = i;
+    for (let j = 1; j <= la; j++) {
+      const val = b[i-1]===a[j-1] ? row[j-1] : Math.min(row[j-1], row[j], prev) + 1;
+      row[j-1] = prev; prev = val;
+    }
+    row[la] = prev;
+  }
+  return 1 - row[la] / Math.max(la, lb);
+}
+
+/* ─── 분석 ─── */
+function analyzeRepetitions() {
+  if (!chatData) return;
+  resolvedCount = 0;
+
+  const minRepeat    = parseInt(document.getElementById('minRepeat').value) || 2;
+  const minLen       = parseInt(document.getElementById('minLength').value) || 10;
+  const simThreshold = parseInt(simSlider.value) / 100;
+  const messages     = chatData.data.message;
+
+  // 분석 버튼 비활성화 + 진행 표시
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 분석 중…';
+
+  const sentMap = new Map();
+  messages.forEach((msg, mi) => {
+    if (!msg?.data) return;
+    tokenizeSentences(msg.data, minLen).forEach(sentence => {
+      const norm = normSentence(sentence);
+      if (!norm) return;
+      if (!sentMap.has(norm)) sentMap.set(norm, []);
+      sentMap.get(norm).push({ mi, sentence, role: msg.role || 'unknown' });
+    });
+  });
+
+  const entries = Array.from(sentMap.entries());
+  const visited = new Set();
+  const groups  = [];
+
+  // 유사도 비교가 필요 없는 경우 동기로 빠르게 처리
+  if (simThreshold >= 1.0) {
+    for (let i = 0; i < entries.length; i++) {
+      const [normA, occsA] = entries[i];
+      const uniqueMsgs = new Set(occsA.map(o => o.mi));
+      if (uniqueMsgs.size >= minRepeat) groups.push({ representative: normA, occurrences: [...occsA], uniqueMsgCount: uniqueMsgs.size });
+    }
+    groups.sort((a,b) => b.uniqueMsgCount - a.uniqueMsgCount);
+    repetitionGroups = groups;
+    btn.disabled = false;
+    btn.textContent = '🔎 분석 실행';
+    renderResults(messages.length, groups);
+    return;
+  }
+
+  // 유사도 비교가 필요한 경우: 청크 단위 비동기 처리로 UI 블로킹 방지
+  // 문자열 길이 제한: 너무 긴 문장끼리 비교는 성능 폭탄 → 200자 초과 시 정확 일치만
+  const MAX_SIM_LEN = 200;
+  const CHUNK_SIZE  = 50; // 한 번에 처리할 항목 수
+  let i = 0;
+
+  function processChunk() {
+    const end = Math.min(i + CHUNK_SIZE, entries.length);
+    for (; i < end; i++) {
+      if (visited.has(i)) continue;
+      const [normA, occsA] = entries[i];
+      const cluster = { representative: normA, occurrences: [...occsA] };
+      visited.add(i);
+      // 짧은 문장만 유사도 비교 (긴 문장은 정확 일치만)
+      if (normA.length <= MAX_SIM_LEN) {
+        for (let j = i+1; j < entries.length; j++) {
+          if (visited.has(j)) continue;
+          const normB = entries[j][0];
+          if (normB.length > MAX_SIM_LEN) continue;
+          // 길이 비율이 너무 차이나면 스킵 (similarity 내부 조건보다 먼저 거름)
+          if (Math.max(normA.length, normB.length) / Math.min(normA.length || 1, normB.length || 1) > 2.2) continue;
+          if (similarity(normA, normB) >= simThreshold) {
+            cluster.occurrences.push(...entries[j][1]);
+            visited.add(j);
+          }
+        }
+      }
+      const uniqueMsgs = new Set(cluster.occurrences.map(o => o.mi));
+      if (uniqueMsgs.size >= minRepeat) groups.push({ ...cluster, uniqueMsgCount: uniqueMsgs.size });
+    }
+
+    if (i < entries.length) {
+      // 진행률 표시
+      const pct = Math.round(i / entries.length * 100);
+      btn.textContent = `⏳ ${pct}%…`;
+      setTimeout(processChunk, 0); // 다음 청크는 다음 이벤트 루프에서
+    } else {
+      // 완료
+      groups.sort((a,b) => b.uniqueMsgCount - a.uniqueMsgCount);
+      repetitionGroups = groups;
+      btn.disabled = false;
+      btn.textContent = '🔎 분석 실행';
+      renderResults(messages.length, groups);
+    }
+  }
+
+  setTimeout(processChunk, 0);
+}
+
+/* ─── 렌더 ─── */
+function renderResults(total, groups) {
+  const affected = new Set();
+  groups.forEach(g => g.occurrences.forEach(o => affected.add(o.mi)));
+
+  document.getElementById('statTotal').textContent    = total;
+  document.getElementById('statGroups').textContent   = groups.length;
+  document.getElementById('statAffected').textContent = affected.size;
+  document.getElementById('statResolved').textContent = resolvedCount;
+  document.getElementById('resultsSection').style.display = 'block';
+  document.getElementById('dlBar').style.display = 'block';
+
+  const list = document.getElementById('groupList');
+  if (!groups.length) {
+    list.innerHTML = `<div class="empty"><span class="eicon">🎉</span><p>반복 출력이 감지되지 않았습니다!</p></div>`;
+    return;
+  }
+  list.innerHTML = groups.map((g, gi) => buildGroupCard(g, gi)).join('');
+}
+
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function highlightInText(fullText, sentence) {
+  const escaped = sentence.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  try { return escHtml(fullText).replace(new RegExp(escaped.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'), 'gi'), m => `<mark class="hl">${escHtml(m)}</mark>`); }
+  catch { return escHtml(fullText); }
+}
+
+function buildGroupCard(g, gi) {
+  const rep = g.occurrences[0]?.sentence || g.representative;
+  const preview = rep.length > 130 ? rep.slice(0,130)+'…' : rep;
+  const badgeClass = g.uniqueMsgCount >= 5 ? 'many' : 'few';
+
+  const occsHtml = g.occurrences.map((o, oi) => {
+    const msg = chatData.data.message[o.mi];
+    const roleClass = o.role === 'user' ? 'user' : o.role === 'char' ? 'char' : 'system';
+    const highlighted = highlightInText(msg?.data || '', o.sentence);
+    const ts = msg?.time ? new Date(msg.time).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+
+    return `<div class="occ-item" id="occ-${gi}-${oi}">
+      <div class="occ-meta">
+        <span class="role-pill ${roleClass}">${escHtml(o.role)}</span>
+        <span>메시지 #${o.mi+1}</span>
+        ${ts ? `<span>${ts}</span>` : ''}
+        <button class="occ-toggle-btn" onclick="toggleOccEdit(${gi},${oi})">✏️ 개별 수정</button>
+      </div>
+      <div class="occ-preview">${highlighted}</div>
+      <div class="occ-edit-panel" id="occ-edit-${gi}-${oi}">
+        <textarea id="occ-ta-${gi}-${oi}" rows="5">${escHtml(msg?.data||'')}</textarea>
+        <div class="occ-edit-actions">
+          <button class="btn btn-accent btn-sm" onclick="saveOccEdit(${gi},${oi},${o.mi})">저장</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleOccEdit(${gi},${oi})">취소</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="group-card" id="group-${gi}">
+    <div class="group-header" onclick="toggleGroup(${gi})">
+      <span class="rep-badge ${badgeClass}">${g.uniqueMsgCount}회 반복</span>
+      <div class="group-header-info">
+        <div class="group-sentence">${escHtml(preview)}</div>
+        <div class="group-submeta">출현 ${g.occurrences.length}건</div>
+      </div>
+      <span class="toggle-arrow">▼</span>
+    </div>
+    <div class="group-body">
+      <div class="occurrences">${occsHtml}</div>
+      <div class="bulk-panel">
+        <label>일괄 수정 — 이 반복 문장을 모든 위치에서 교체 또는 삭제</label>
+        <textarea id="bulk-ta-${gi}" rows="3">${escHtml(rep)}</textarea>
+        <div class="bulk-actions">
+          <button class="btn btn-accent btn-sm" onclick="applyBulk(${gi})">모든 위치에 반영</button>
+          <button class="btn btn-red btn-sm" onclick="deleteBulk(${gi})">반복 문장 전체 삭제</button>
+        </div>
+        <div class="apply-status" id="bulk-status-${gi}"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ─── 토글 ─── */
+function toggleGroup(gi) {
+  document.getElementById('group-'+gi).classList.toggle('open');
+}
+function expandAll()  { document.querySelectorAll('.group-card').forEach(c => c.classList.add('open')); }
+function collapseAll(){ document.querySelectorAll('.group-card').forEach(c => c.classList.remove('open')); }
+
+function toggleOccEdit(gi, oi) {
+  const panel = document.getElementById(`occ-edit-${gi}-${oi}`);
+  panel.classList.toggle('visible');
+  if (panel.classList.contains('visible')) {
+    const ta = document.getElementById(`occ-ta-${gi}-${oi}`);
+    // 텍스트에서 HTML 엔티티 되돌리기
+    const o = repetitionGroups[gi].occurrences[oi];
+    const msg = chatData.data.message[o.mi];
+    ta.value = msg?.data || '';
+    ta.focus();
+  }
+}
+
+/* ─── 개별 저장 ─── */
+function saveOccEdit(gi, oi, mi) {
+  const ta  = document.getElementById(`occ-ta-${gi}-${oi}`);
+  const msg = chatData.data.message[mi];
+  if (!msg) return;
+  msg.data = ta.value;
+
+  // 미리보기 갱신
+  const o   = repetitionGroups[gi].occurrences[oi];
+  const previewEl = document.querySelector(`#occ-${gi}-${oi} .occ-preview`);
+  if (previewEl) previewEl.innerHTML = highlightInText(msg.data, o.sentence);
+
+  document.getElementById(`occ-edit-${gi}-${oi}`).classList.remove('visible');
+  bumpResolved(gi);
+  updateDlInfo();
+}
+
+/* ─── 일괄 수정 ─── */
+function applyBulk(gi) {
+  const g       = repetitionGroups[gi];
+  const newText = document.getElementById(`bulk-ta-${gi}`).value;
+  let count = 0;
+  g.occurrences.forEach(o => {
+    const msg = chatData.data.message[o.mi];
+    if (!msg) return;
+    const esc = o.sentence.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    try {
+      const updated = msg.data.replace(new RegExp(esc,'g'), newText);
+      if (updated !== msg.data) { msg.data = updated; count++; }
+    } catch {}
+  });
+  document.getElementById(`bulk-status-${gi}`).textContent = count ? `✅ ${count}개 메시지에 반영됨` : 'ℹ️ 변경된 항목 없음';
+  if (count) { bumpResolved(gi); updateDlInfo(); }
+}
+
+function deleteBulk(gi) {
+  if (!confirm('반복된 문장을 모든 위치에서 삭제할까요?')) return;
+  const g = repetitionGroups[gi];
+  let count = 0;
+  g.occurrences.forEach(o => {
+    const msg = chatData.data.message[o.mi];
+    if (!msg) return;
+    const esc = o.sentence.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    try {
+      const updated = msg.data.replace(new RegExp(esc,'g'),'').replace(/\n{3,}/g,'\n\n').trim();
+      if (updated !== msg.data) { msg.data = updated; count++; }
+    } catch {}
+  });
+  document.getElementById(`bulk-status-${gi}`).textContent = count ? `🗑 ${count}개 메시지에서 삭제됨` : 'ℹ️ 변경 없음';
+  if (count) { bumpResolved(gi); updateDlInfo(); }
+}
+
+function bumpResolved(gi) {
+  const card = document.getElementById('group-'+gi);
+  if (!card.classList.contains('resolved')) {
+    card.classList.add('resolved');
+    resolvedCount++;
+    document.getElementById('statResolved').textContent = resolvedCount;
+  }
+}
+
+/* ─── 다운로드 ─── */
+function updateDlInfo() {
+  document.getElementById('dlInfo').textContent = `${resolvedCount}개 그룹 처리됨 — 다운로드하여 저장하세요`;
+}
+
+function downloadModified() {
+  if (!chatData) return;
+  const json = JSON.stringify(chatData, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const base = (fileInput.files[0]?.name || 'chat').replace(/\.json$/i,'');
+  a.href = url; a.download = `${base}_deduped.json`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

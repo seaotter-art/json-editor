@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>JSON 인덱스 선택 추출 및 순서 정리 도구</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f4f0;
+  --surface: #ffffff;
+  --surface2: #f9f8f5;
+  --border: #e2e0d8;
+  --border2: #cbc9bf;
+  --text: #1a1917;
+  --text-muted: #6b6860;
+  --text-dim: #a09e97;
+  --accent: #5b47e0;
+  --accent-bg: #eeedfb;
+  --red: #d63b3b;
+  --red-bg: #fdf0f0;
+  --amber: #c47a00;
+  --amber-bg: #fdf5e6;
+  --green: #1e8a4c;
+  --green-bg: #edf7f1;
+  --mono: 'Courier New', monospace;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.page { max-width: 1100px; margin: 0 auto; padding: 24px 16px 80px; }
+
+/* ── 헤더 ── */
+.header { margin-bottom: 24px; }
+.header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; }
+.header p { font-size: 0.875rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ── 카드 ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 14px;
+}
+
+/* ── 업로드 존 ── */
+.upload-zone {
+  border: 2px dashed var(--border2);
+  border-radius: 10px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.18s;
+  position: relative;
+  background: var(--surface2);
+}
+.upload-zone:hover { border-color: var(--accent); background: var(--accent-bg); }
+.upload-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.upload-zone .icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+.upload-zone .label { font-size: 0.95rem; color: var(--text-muted); }
+.upload-zone .label strong { color: var(--accent); }
+.upload-zone .sub { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; }
+
+/* ── 업로드된 파일 목록 ── */
+#uploadedFileList {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface2);
+}
+.file-list-empty {
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  color: var(--text-dim);
+}
+.file-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+.file-list-item:last-child { border-bottom: none; }
+.file-list-item span { color: var(--text-muted); }
+
+/* ── 버튼 ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 9px 16px;
+  border: none; border-radius: 8px;
+  font-size: 0.875rem; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:hover:not(:disabled) { background: #4a38c4; }
+.btn-ghost { background: var(--surface2); color: var(--text-muted); border: 1.5px solid var(--border); }
+.btn-ghost:hover:not(:disabled) { background: var(--border); color: var(--text); }
+.btn-green { background: var(--green-bg); color: var(--green); border: 1.5px solid #b5dfc8; }
+.btn-green:hover:not(:disabled) { background: #d5eee0; }
+.btn-red { background: var(--red-bg); color: var(--red); border: 1.5px solid #f0c4c4; }
+.btn-red:hover:not(:disabled) { background: #fce0e0; }
+.btn-sm { padding: 5px 11px; font-size: 0.8rem; border-radius: 6px; }
+.btn-full { width: 100%; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── 액션 버튼 그룹 ── */
+.action-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+
+/* ── 상태 메시지 ── */
+#status {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-top: 12px;
+  display: none;
+}
+#status.success { background: var(--green-bg); color: var(--green); display: block; }
+#status.error   { background: var(--red-bg);   color: var(--red);   display: block; }
+#status.info    { background: var(--accent-bg); color: var(--accent); display: block; }
+#status.show    { display: block; background: var(--accent-bg); color: var(--accent); }
+
+/* ── 비교 결과 ── */
+#comparisonResult {
+  padding: 12px 16px;
+  background: var(--accent-bg);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── 검색 입력 ── */
+.search-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+#searchInput {
+  flex: 1;
+  min-width: 200px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+#searchInput:focus { border-color: var(--accent); }
+#searchInput::placeholder { color: var(--text-dim); }
+
+#searchStatus {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* ── 선택 컨테이너 (가로 스크롤 카드) ── */
+#selectionContainer, #searchResults {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 14px;
+  padding: 4px 0 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── 선택 컬럼 카드 ── */
+.selection-column {
+  flex: 0 0 auto;
+  width: 300px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.column-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.column-header h4 { margin: 0; font-size: 0.9rem; font-weight: 700; word-break: break-all; color: var(--text); }
+.column-header p  { margin: 3px 0 0; font-size: 0.8rem; color: var(--text-dim); }
+.column-controls {
+  display: flex; gap: 8px; padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.column-controls .btn { flex: 1; }
+.column-content {
+  padding: 12px;
+  overflow-y: auto;
+  max-height: 420px;
+  flex: 1;
+}
+
+/* ── 인덱스 체크박스 항목 ── */
+.index-item { margin-bottom: 8px; }
+.item-header { display: flex; align-items: flex-start; gap: 8px; }
+.item-header input[type="checkbox"] {
+  margin-top: 3px; flex-shrink: 0;
+  accent-color: var(--accent);
+  width: 15px; height: 15px; cursor: pointer;
+}
+.item-label { cursor: pointer; flex-grow: 1; }
+.item-label strong { font-size: 0.875rem; color: var(--text); }
+.item-label .preview { color: var(--text-dim); font-size: 0.8rem; display: block; margin-top: 1px; }
+.index-detail {
+  display: none;
+  margin-top: 6px;
+  padding: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-family: var(--mono);
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ── 리오더 목록 ── */
+#reorderList {
+  min-height: 80px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 10px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: var(--text-dim);
+}
+
+/* ── 리오더 아이템 ── */
+.reorder-item {
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  cursor: grab;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.reorder-item:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(91,71,224,0.1); }
+.reorder-item.dragging {
+  opacity: 0.5;
+  background: var(--accent-bg);
+  border: 2px dashed var(--accent);
+}
+.reorder-item-header {
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  display: block;
+  color: var(--text);
+}
+.reorder-item-preview {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  display: block;
+  margin-top: 2px;
+}
+
+/* ── 구분선 ── */
+.divider { border: 0; border-top: 1px solid var(--border); margin: 8px 0 20px; }
+
+/* ── 모바일 ── */
+@media (max-width: 600px) {
+  .action-buttons { flex-direction: column; }
+  .action-buttons .btn { width: 100%; }
+  .search-row { flex-direction: column; }
+  #searchInput { min-width: unset; width: 100%; }
+  .selection-column { width: 260px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 헤더 -->
+  <div class="header">
+    <h1>🗂 JSON 인덱스 선택 추출 및 순서 정리 도구</h1>
+    <p>RisuAI 채팅 JSON 파일에서 인덱스를 선택·재정렬하여 추출합니다. (최대 3개 파일)</p>
+  </div>
+
+  <!-- 1. 업로드 -->
+  <div class="card" id="uploadSection">
+    <div class="card-title">① JSON 파일 업로드 (최대 3개)</div>
+    <div class="upload-zone">
+      <input type="file" id="fileInput" multiple accept=".json">
+      <span class="icon">📂</span>
+      <div class="label"><strong>클릭하여 파일 선택</strong></div>
+      <div class="sub">RisuAI 채팅 .json 파일 / 최대 3개</div>
+    </div>
+    <div id="uploadedFileList"><div class="file-list-empty">현재 로드된 파일 없음</div></div>
+    <div style="margin-top:14px;">
+      <button id="processButton" class="btn btn-accent" onclick="processFiles()" disabled>
+        📋 추출 목록 생성 (<span id="fileCount">0</span>개 파일)
+      </button>
+    </div>
+    <div id="status"></div>
+  </div>
+
+  <!-- 2. 비교 결과 -->
+  <div class="card" id="comparisonResultSection" style="display:none;">
+    <div class="card-title">② 데이터 비교 결과</div>
+    <div id="comparisonResult"></div>
+  </div>
+
+  <!-- 3. 인덱스 선택 -->
+  <div class="card" id="selectionSection" style="display:none;">
+    <div class="card-title">③ 추출할 인덱스 선택 (통합/개별)</div>
+    <div class="action-buttons">
+      <button class="btn btn-ghost btn-sm" onclick="toggleAllDetails('selectionContainer', true)">전체 펼치기</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleAllDetails('selectionContainer', false)">전체 접기</button>
+    </div>
+    <div id="selectionContainer"></div>
+  </div>
+
+  <!-- 3.5. 키워드 검색 -->
+  <div class="card" id="searchSection" style="display:none;">
+    <div class="card-title">③.5 키워드 검색 및 선택</div>
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="검색어를 입력하세요 (두 글자 이상)">
+      <button class="btn btn-accent" onclick="searchAndDisplayResults()">🔍 검색</button>
+    </div>
+    <div id="searchStatus"></div>
+    <div id="searchResults"></div>
+  </div>
+
+  <!-- 4. 순서 정리 -->
+  <div class="card" id="reorderSection" style="display:none;">
+    <div class="card-title">④ 선택된 인덱스 순서 정리 및 편집</div>
+    <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:12px;">
+      드래그 앤 드롭으로 순서를 변경할 수 있습니다. 드래그 전까지는 시간 순서(time)가 유지됩니다.
+    </p>
+    <div class="action-buttons">
+      <button class="btn btn-ghost btn-sm" onclick="toggleAllDetails('reorderList', true)">전체 펼치기</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleAllDetails('reorderList', false)">전체 접기</button>
+      <button class="btn btn-red btn-sm" onclick="resetToTimeSort()">🔄 시간 순서로 초기화</button>
+    </div>
+    <div id="reorderList">선택된 인덱스가 여기에 표시됩니다. 왼쪽 목록에서 항목을 선택해주세요.</div>
+  </div>
+
+  <!-- 5. 다운로드 -->
+  <div class="card" id="downloadSection" style="display:none;">
+    <div class="card-title">⑤ 최종 추출 및 다운로드</div>
+    <button class="btn btn-green btn-full" onclick="extractAndDownload()">
+      ⬇️ 선택 항목 다운로드 (화면에 보이는 순서 유지)
+    </button>
+  </div>
+
+</div>
+
+<script>
+let fileData = [];
+let unifiedLength = 0;
+const selectedItemsMap = new Map();
+let isManualOrderActive = false;
+
+function simpleHash(str) { let hash = 5381; for (let i = 0; i < str.length; i++) { hash = (hash * 33) ^ str.charCodeAt(i); } return hash >>> 0; }
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = type || 'show';
+  el.style.display = msg ? 'block' : 'none';
+}
+
+async function handleFileSelect(event) {
+  const files = event.target.files;
+  if (files.length === 0) return;
+  setStatus('파일 처리 준비 중...', 'info');
+  for (const file of Array.from(files)) {
+    if (fileData.length >= 3) { alert('최대 3개 파일만 로드 가능합니다.'); continue; }
+    if (fileData.some(f => f.name === file.name)) continue;
+    setStatus(`파일 '${file.name}' 읽는 중...`, 'info');
+    try {
+      const data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = e => reject(e);
+        reader.readAsText(file);
+      });
+      const fullObject = JSON.parse(data);
+      const dataArray = fullObject.data?.message;
+      if (!Array.isArray(dataArray)) throw new Error("JSON이 'data.message' 배열을 포함한 RisuAI 채팅 형식이 아닙니다.");
+      dataArray.sort((a, b) => (a.time || 0) - (b.time || 0));
+      dataArray.forEach(item => { if (item) item._hash = simpleHash(JSON.stringify(item)); });
+      fileData.push({ name: file.name, data: dataArray });
+    } catch (error) {
+      alert(`'${file.name}' 처리 오류: ${error.message}`);
+    }
+  }
+  updateFileListUI();
+  event.target.value = '';
+}
+document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+function updateFileListUI() {
+  const listDiv = document.getElementById('uploadedFileList');
+  const processButton = document.getElementById('processButton');
+  const fileCountSpan = document.getElementById('fileCount');
+  if (fileData.length === 0) {
+    listDiv.innerHTML = '<div class="file-list-empty">현재 로드된 파일 없음</div>';
+    processButton.disabled = true;
+    setStatus('', '');
+  } else {
+    listDiv.innerHTML = fileData.map((f, i) =>
+      `<div class="file-list-item">
+        <span>📄 ${i + 1}. ${f.name} <span style="color:var(--text-dim)">(항목: ${f.data.length})</span></span>
+        <button class="btn btn-red btn-sm" onclick="removeFile(${i})">삭제</button>
+      </div>`
+    ).join('');
+    processButton.disabled = false;
+    setStatus(`${fileData.length}개 파일 준비 완료.`, 'success');
+  }
+  fileCountSpan.textContent = fileData.length;
+  ['comparisonResultSection', 'selectionSection', 'searchSection', 'reorderSection', 'downloadSection'].forEach(id => document.getElementById(id).style.display = 'none');
+  selectedItemsMap.clear();
+  isManualOrderActive = false;
+}
+
+function removeFile(index) {
+  if (confirm(`'${fileData[index].name}'을(를) 제거하시겠습니까?`)) {
+    fileData.splice(index, 1);
+    updateFileListUI();
+  }
+}
+
+function findUnifiedLength(dataArrays) {
+  if (dataArrays.length <= 1) return 0;
+  const minLength = Math.min(...dataArrays.map(arr => arr.length));
+  let unifiedLen = 0;
+  for (let i = 0; i < minLength; i++) {
+    if (dataArrays.slice(1).every(arr => arr[i]?._hash === dataArrays[0][i]?._hash)) unifiedLen++;
+    else break;
+  }
+  return unifiedLen;
+}
+
+function processFiles() {
+  if (fileData.length === 0) return;
+  setStatus('데이터 비교 및 목록 생성 중...', 'info');
+  setTimeout(() => {
+    unifiedLength = findUnifiedLength(fileData.map(f => f.data));
+    displayComparisonResult();
+    generateIndexSelection();
+    isManualOrderActive = false;
+    updateReorderList();
+    setStatus('인덱스 목록 생성 완료. 항목을 선택하고 순서를 정리해주세요.', 'success');
+    ['comparisonResultSection', 'selectionSection', 'searchSection', 'reorderSection', 'downloadSection'].forEach(id => document.getElementById(id).style.display = 'block');
+  }, 50);
+}
+
+function displayComparisonResult() {
+  const resultDiv = document.getElementById('comparisonResult');
+  if (fileData.length === 1) {
+    resultDiv.textContent = `✅ 단일 파일 로드 완료. 전체 ${fileData[0].data.length}개 항목이 표시됩니다.`;
+  } else if (unifiedLength > 0) {
+    resultDiv.textContent = `✅ 1번 ~ ${unifiedLength}번 인덱스까지 내용이 모든 파일에서 동일합니다.`;
+  } else {
+    resultDiv.textContent = '⚠️ 공통된 인덱스 구간이 없습니다. 모든 내용이 파일별로 표시됩니다.';
+    resultDiv.style.background = 'var(--amber-bg)';
+    resultDiv.style.color = 'var(--amber)';
+  }
+}
+
+function generateIndexSelection() {
+  const container = document.getElementById('selectionContainer');
+  container.innerHTML = '';
+  let finalHtml = '';
+  if (unifiedLength > 0) {
+    const columnId = "unifiedColumn";
+    const itemsHtml = fileData[0].data.slice(0, unifiedLength).map((item, i) => createIndexItemHtml('unified', i, 0, item, columnId)).join('');
+    finalHtml += createColumnHtml('통합 인덱스', `1 - ${unifiedLength}`, columnId, itemsHtml);
+  }
+  fileData.forEach((file, fileIdx) => {
+    const individualItems = file.data.slice(unifiedLength);
+    if (individualItems.length > 0) {
+      const columnId = `individualColumn-${fileIdx}`;
+      const title = fileData.length === 1 ? '전체 인덱스' : `[${file.name.replace(/\.json$/i, '')}] 개별 인덱스`;
+      const range = fileData.length === 1 ? `1 - ${file.data.length}` : `${unifiedLength + 1} - ${file.data.length}`;
+      const itemsHtml = individualItems.map((item, i) => createIndexItemHtml('individual', unifiedLength + i, fileIdx, item, columnId)).join('');
+      finalHtml += createColumnHtml(title, range, columnId, itemsHtml);
+    }
+  });
+  container.innerHTML = finalHtml;
+}
+
+function createColumnHtml(title, range, columnId, content) {
+  return `<div class="selection-column">
+    <div class="column-header">
+      <h4>${title}</h4>
+      <p>${range}</p>
+    </div>
+    <div class="column-controls">
+      <button class="btn btn-accent btn-sm" onclick="toggleColumnSelection('${columnId}', true)">전체 선택</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleColumnSelection('${columnId}', false)">전체 해제</button>
+    </div>
+    <div class="column-content">${content}</div>
+  </div>`;
+}
+
+function createIndexItemHtml(type, itemIndex, fileIndex, item, columnId) {
+  const index = itemIndex + 1;
+  const uniqueKey = `${fileIndex}-${itemIndex}`;
+  const content = (item.data || '').trim().replace(/\n/g, ' ').substring(0, 40) + '...';
+  const fileName = fileData[fileIndex]?.name.replace(/\.json$/i, '') || `File ${fileIndex + 1}`;
+  const fullContent = `Role: ${item.role || 'N/A'}\nData:\n${item.data || '[내용 없음]'}\nOriginal File: ${fileName} (Index: ${index})`;
+  return `<div class="index-item">
+    <div class="item-header">
+      <input type="checkbox" id="check-${uniqueKey}" data-type="${type}" data-item-index="${itemIndex}" data-file-index="${fileIndex}" data-column-id="${columnId}" onchange="updateReorderList()">
+      <div class="item-label" onclick="toggleDetail(this)">
+        <strong>${type === 'unified' ? '[통합] ' : ''}${index} index</strong>
+        <span class="preview">${content}</span>
+      </div>
+    </div>
+    <div class="index-detail">${fullContent.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+  </div>`;
+}
+
+function toggleAllDetails(containerId, shouldExpand) {
+  const container = document.getElementById(containerId);
+  if (container) container.querySelectorAll('.index-detail').forEach(d => d.style.display = shouldExpand ? 'block' : 'none');
+}
+
+function toggleColumnSelection(columnId, select) {
+  document.querySelectorAll(`input[data-column-id="${columnId}"]`).forEach(cb => cb.checked = select);
+  updateReorderList();
+}
+
+function toggleDetail(element) {
+  const itemContainer = element.closest('.index-item') || element.closest('.reorder-item');
+  if (!itemContainer) return;
+  const detailDiv = itemContainer.querySelector('.index-detail');
+  if (detailDiv) detailDiv.style.display = detailDiv.style.display === 'block' ? 'none' : 'block';
+}
+
+function searchAndDisplayResults() {
+  document.getElementById('searchStatus').textContent = '🔍 검색 중...';
+  setTimeout(() => {
+    const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+    const resultsDiv = document.getElementById('searchResults');
+    const statusDiv = document.getElementById('searchStatus');
+    resultsDiv.innerHTML = '';
+    statusDiv.innerHTML = '';
+    if (searchTerm.length < 2) { statusDiv.textContent = '⚠️ 검색어는 두 글자 이상이어야 합니다.'; return; }
+    let totalMatches = 0;
+    let searchResultsData = [];
+    fileData.forEach((file, fileIdx) => {
+      let matchingItems = [];
+      file.data.forEach((item, itemIdx) => {
+        const searchTarget = `${item.data || ''} ${item.role || ''}`.toLowerCase();
+        if (item && searchTarget.includes(searchTerm)) matchingItems.push({ item, itemIndex: itemIdx });
+      });
+      if (matchingItems.length > 0) {
+        searchResultsData.push({ fileName: file.name, fileIndex: fileIdx, matches: matchingItems.length, items: matchingItems });
+        totalMatches += matchingItems.length;
+      }
+    });
+    if (totalMatches > 0) {
+      statusDiv.innerHTML = `<span style="color:var(--green);font-weight:600;">✅ 총 ${totalMatches}개의 검색 결과</span>
+        <div class="action-buttons" style="margin-top:10px;">
+          <button class="btn btn-ghost btn-sm" onclick="toggleAllDetails('searchResults', true)">전체 펼치기</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleAllDetails('searchResults', false)">전체 접기</button>
+        </div>`;
+      let finalHtml = '';
+      searchResultsData.forEach(group => {
+        const columnId = `searchColumn-${group.fileIndex}`;
+        const itemsHtml = group.items.map(match => createIndexItemHtml('search', match.itemIndex, group.fileIndex, match.item, columnId)).join('');
+        finalHtml += createColumnHtml(`[${group.fileName.replace(/\.json$/i, '')}]`, `${group.matches}개 일치`, columnId, itemsHtml);
+      });
+      resultsDiv.innerHTML = finalHtml;
+    } else {
+      statusDiv.textContent = `❌ '${searchTerm}'에 대한 검색 결과가 없습니다.`;
+    }
+    updateReorderList();
+  }, 50);
+}
+
+function resetToTimeSort() {
+  if (confirm("수동으로 변경한 순서를 무시하고, 모든 항목을 시간 순서대로 재정렬하시겠습니까?")) {
+    isManualOrderActive = false;
+    updateReorderList();
+    setStatus('✅ 순서가 시간 순서대로 초기화되었습니다.', 'success');
+  }
+}
+
+function updateReorderList() {
+  const reorderList = document.getElementById('reorderList');
+  const checkedKeys = new Set();
+  document.querySelectorAll('#selectionContainer input[type="checkbox"]:checked, #searchResults input[type="checkbox"]:checked').forEach(checkbox => {
+    const { fileIndex, itemIndex } = checkbox.dataset;
+    const uniqueKey = `${fileIndex}-${itemIndex}`;
+    checkedKeys.add(uniqueKey);
+    if (!selectedItemsMap.has(uniqueKey)) {
+      const item = fileData[parseInt(fileIndex)]?.data[parseInt(itemIndex)];
+      if (item) selectedItemsMap.set(uniqueKey, { item, stableId: item.time || Date.now() });
+    }
+  });
+  for (const key of selectedItemsMap.keys()) { if (!checkedKeys.has(key)) selectedItemsMap.delete(key); }
+  if (selectedItemsMap.size === 0) isManualOrderActive = false;
+
+  let finalKeys = [];
+  if (isManualOrderActive) {
+    const currentReorderKeys = Array.from(reorderList.querySelectorAll('.reorder-item')).map(div => div.dataset.uniqueKey);
+    const existingKeysInOrder = currentReorderKeys.filter(key => selectedItemsMap.has(key));
+    const newlyAddedKeys = Array.from(selectedItemsMap.keys()).filter(key => !existingKeysInOrder.includes(key));
+    const sortedNewKeys = newlyAddedKeys.sort((a, b) => (selectedItemsMap.get(a)?.stableId || 0) - (selectedItemsMap.get(b)?.stableId || 0));
+    finalKeys = [...existingKeysInOrder, ...sortedNewKeys];
+  } else {
+    finalKeys = Array.from(selectedItemsMap.keys()).sort((a, b) => (selectedItemsMap.get(a)?.stableId || 0) - (selectedItemsMap.get(b)?.stableId || 0));
+  }
+
+  const itemsHtml = finalKeys.map(key => createReorderItemHtml(key, selectedItemsMap.get(key).item)).join('');
+  reorderList.innerHTML = itemsHtml || '<span style="color:var(--text-dim);font-size:0.875rem;">선택된 인덱스가 없습니다. 왼쪽 목록에서 항목을 선택해주세요.</span>';
+
+  reorderList.querySelectorAll('.reorder-item').forEach(item => {
+    item.addEventListener('dragstart', handleDragStart);
+    item.addEventListener('dragover', handleDragOver);
+    item.addEventListener('drop', handleDrop);
+    item.addEventListener('dragend', handleDragEnd);
+  });
+
+  document.getElementById('reorderSection').style.display = 'block';
+  setStatus(`선택 항목 ${finalKeys.length}개 · 정렬 모드: ${isManualOrderActive ? '수동 순서 보존' : '시간 순서 자동'}`, 'info');
+}
+
+function createReorderItemHtml(uniqueKey, item) {
+  const [fileIndexStr, itemIndexStr] = uniqueKey.split('-');
+  const fileIndex = parseInt(fileIndexStr);
+  const itemIndex = parseInt(itemIndexStr);
+  const index = itemIndex + 1;
+  const fileName = fileData[fileIndex]?.name.replace(/\.json$/i, '') || `File ${fileIndex + 1}`;
+  const content = (item.data || '').trim().replace(/\n/g, ' ').substring(0, 40) + '...';
+  const fullContent = `Role: ${item.role || 'N/A'}\nData:\n${item.data || '[내용 없음]'}\nOriginal File: ${fileName} (Index: ${index})`;
+  return `<div class="reorder-item" draggable="true" data-unique-key="${uniqueKey}">
+    <div class="reorder-item-header" onclick="toggleDetail(this)">
+      [${fileName}] ${index} index
+      <span class="reorder-item-preview">${content}</span>
+    </div>
+    <div class="index-detail">${fullContent.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+  </div>`;
+}
+
+let draggedItem = null;
+
+function handleDragStart(e) {
+  draggedItem = this;
+  isManualOrderActive = true;
+  setStatus(`선택 항목 ${selectedItemsMap.size}개 · 정렬 모드: 수동 순서 보존`, 'info');
+  setTimeout(() => this.classList.add('dragging'), 0);
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/html', this.innerHTML);
+}
+
+function handleDragEnd(e) { this.classList.remove('dragging'); draggedItem = null; }
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const targetItem = this.closest('.reorder-item');
+  if (targetItem && targetItem !== draggedItem) {
+    const rect = targetItem.getBoundingClientRect();
+    const next = (e.clientY - rect.top) / rect.height > 0.5;
+    const parent = targetItem.parentNode;
+    if (next) parent.insertBefore(draggedItem, targetItem.nextSibling);
+    else parent.insertBefore(draggedItem, targetItem);
+  }
+}
+
+function handleDrop(e) { e.stopPropagation(); return false; }
+
+function extractAndDownload() {
+  const reorderList = document.getElementById('reorderList');
+  const reorderedItems = reorderList.querySelectorAll('.reorder-item');
+  if (reorderedItems.length === 0) { alert('추출할 인덱스를 선택하거나, 순서 정리 목록이 비어있지 않은지 확인해주세요.'); return; }
+
+  let extractedData = [];
+  const hashSet = new Set();
+  reorderedItems.forEach(reorderDiv => {
+    const uniqueKey = reorderDiv.dataset.uniqueKey;
+    const itemInfo = selectedItemsMap.get(uniqueKey);
+    if (itemInfo && itemInfo.item && !hashSet.has(itemInfo.item._hash)) {
+      const finalItem = { ...itemInfo.item };
+      delete finalItem._hash;
+      extractedData.push(finalItem);
+      hashSet.add(itemInfo.item._hash);
+    }
+  });
+
+  if (extractedData.length === 0) { alert('유효한 추출 항목이 없습니다. 중복 항목이 제거되었을 수 있습니다.'); return; }
+
+  const finalOutputObject = {
+    type: "risuChat", ver: 2,
+    data: {
+      message: extractedData, note: "Messages reordered by user",
+      name: "Extracted Chat (Reordered)", localLore: [], fmIndex: -1,
+      id: `extracted-reordered-${Date.now()}`,
+      scriptstate: { "$rolecheck": "1", "$removechoice": "0", "$debug_reroll": null, "$debug_time": null },
+      lastMemory: "NewChat"
+    },
+    folders: []
+  };
+
+  try {
+    const jsonContent = JSON.stringify(finalOutputObject, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'reordered_ai_chat.json';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    setStatus(`✅ ${extractedData.length}개 항목이 순서 정리되어 다운로드되었습니다.`, 'success');
+  } catch (e) {
+    alert(`⚠️ 다운로드 오류: ${e.message}`);
+  }
+}
+</script>
+</body>
+</html>

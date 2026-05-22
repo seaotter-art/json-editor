@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RisuAI JSON Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f7f7f8;
+  --surface: #ffffff;
+  --surface-hover: #f9f9fb;
+  --border: #e5e5e8;
+  --border2: #d0d0d5;
+  --text: #111112;
+  --text-muted: #636368;
+  --text-dim: #adadb5;
+
+  --c1: #2563eb;   /* 파랑 — inspector */
+  --c2: #d97706;   /* 주황 — replacer */
+  --c3: #7c3aed;   /* 보라 — repeat detector */
+  --c4: #059669;   /* 초록 — selected chat */
+
+  --c1-bg: #eff6ff;
+  --c2-bg: #fffbeb;
+  --c3-bg: #f5f3ff;
+  --c4-bg: #ecfdf5;
+
+  --sans: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* ── 헤더 ── */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 52px 24px 44px;
+  text-align: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+h1 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  max-width: 420px;
+  margin: 0 auto 16px;
+  line-height: 1.65;
+}
+
+.header-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: var(--text-dim);
+}
+.header-meta::before {
+  content: '';
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+/* ── 메인 레이아웃 ── */
+main {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+}
+
+/* ── 섹션 라벨 ── */
+.section-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+}
+
+/* ── 카드 그리드 ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 48px;
+}
+
+/* ── 툴 카드 ── */
+.tool-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.tool-card:hover {
+  border-color: var(--card-color);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+  background: var(--surface-hover);
+}
+
+.tool-card:hover .card-arrow {
+  opacity: 1;
+  transform: translate(2px, -2px);
+}
+
+/* 상단 행: 아이콘 + 화살표 */
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.card-icon-wrap {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  background: var(--card-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+
+.card-arrow {
+  font-size: 1rem;
+  color: var(--card-color);
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.15s;
+  line-height: 1;
+  padding-top: 2px;
+}
+
+/* 번호 뱃지 */
+.card-num {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--card-color);
+  background: var(--card-bg);
+  border-radius: 999px;
+  padding: 2px 9px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.card-desc {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+  flex: 1;
+}
+
+/* ── 태그 ── */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 16px;
+}
+
+.tag {
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--card-bg);
+  color: var(--card-color);
+  border: 1px solid color-mix(in srgb, var(--card-color) 20%, transparent);
+}
+
+/* 각 카드 색상 */
+.card-1 { --card-color: var(--c1); --card-bg: var(--c1-bg); }
+.card-2 { --card-color: var(--c2); --card-bg: var(--c2-bg); }
+.card-3 { --card-color: var(--c3); --card-bg: var(--c3-bg); }
+.card-4 { --card-color: var(--c4); --card-bg: var(--c4-bg); }
+
+/* ── 비교표 섹션 ── */
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 48px;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.compare-table thead th {
+  text-align: left;
+  padding: 12px 18px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.compare-table tbody tr:last-child td { border-bottom: none; }
+.compare-table tbody tr:hover td { background: var(--bg); }
+
+.tname {
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── 시나리오 카드 ── */
+.scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.scenario-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scenario-case {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.scenario-text {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.scenario-result {
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* ── 푸터 ── */
+footer {
+  border-top: 1px solid var(--border);
+  text-align: center;
+  padding: 28px 24px;
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  background: var(--surface);
+}
+
+/* ── 애니메이션 ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+header { animation: fadeUp 0.4s ease both; }
+
+.tool-card {
+  opacity: 0;
+  animation: fadeUp 0.4s ease both;
+}
+.tool-card:nth-child(1) { animation-delay: 0.15s; }
+.tool-card:nth-child(2) { animation-delay: 0.22s; }
+.tool-card:nth-child(3) { animation-delay: 0.29s; }
+.tool-card:nth-child(4) { animation-delay: 0.36s; }
+
+/* ── 반응형 ── */
+@media (max-width: 640px) {
+  .grid { grid-template-columns: 1fr; }
+  .scenario-grid { grid-template-columns: 1fr; }
+  h1 { font-size: 1.7rem; }
+  .compare-table { font-size: 0.8rem; }
+  .compare-table td, .compare-table thead th { padding: 11px 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header>
+  <div class="badge">RisuAI JSON Toolkit</div>
+  <h1>채팅 JSON 파일 편집 도구 모음</h1>
+  <p class="subtitle">RisuAI 채팅 데이터를 검색·수정·정리·재구성하는 4가지 도구</p>
+  <span class="header-meta">모든 처리는 브라우저 로컬 실행 · 서버 전송 없음</span>
+</header>
+
+<main>
+
+  <!-- 도구 카드 -->
+  <div class="section-label" style="margin-bottom:14px;">도구 선택</div>
+  <div class="grid">
+
+    <a class="tool-card card-1" href="json-inspector.html">
+      <div class="card-top">
+        <div class="card-icon-wrap">🔎</div>
+        <span class="card-arrow">↗</span>
+      </div>
+      <span class="card-num">01 · Inspector</span>
+      <div class="card-title">내용 검색 & 직접 수정</div>
+      <p class="card-desc">키워드로 대화 인덱스를 검색한 뒤, 항목을 클릭해 텍스트를 직접 편집하고 수정된 JSON을 다운로드합니다.</p>
+      <div class="tag-list">
+        <span class="tag">키워드 검색</span>
+        <span class="tag">인라인 편집</span>
+        <span class="tag">파일 1개</span>
+      </div>
+    </a>
+
+    <a class="tool-card card-2" href="json-replacer.html">
+      <div class="card-top">
+        <div class="card-icon-wrap">⚡</div>
+        <span class="card-arrow">↗</span>
+      </div>
+      <span class="card-num">02 · Replacer</span>
+      <div class="card-title">단어 일괄 치환 & 삭제</div>
+      <p class="card-desc">특정 단어를 파일 전체에서 한 번에 다른 단어로 바꾸거나 완전히 제거합니다. 바꿀 단어를 비우면 삭제 모드로 동작합니다.</p>
+      <div class="tag-list">
+        <span class="tag">전체 일괄 치환</span>
+        <span class="tag">단어 삭제</span>
+        <span class="tag">미리보기</span>
+      </div>
+    </a>
+
+    <a class="tool-card card-3" href="repeat_detector.html">
+      <div class="card-top">
+        <div class="card-icon-wrap">🔁</div>
+        <span class="card-arrow">↗</span>
+      </div>
+      <span class="card-num">03 · Repeat Detector</span>
+      <div class="card-title">반복 출력 감지 & 정리</div>
+      <p class="card-desc">AI가 루프에 빠져 생성한 반복 문장을 자동으로 찾아냅니다. 개별 수정 또는 일괄 삭제로 오염된 컨텍스트를 정리합니다.</p>
+      <div class="tag-list">
+        <span class="tag">반복 자동 감지</span>
+        <span class="tag">일괄 삭제</span>
+        <span class="tag">AI 오염 정리</span>
+      </div>
+    </a>
+
+    <a class="tool-card card-4" href="selected_Chat.html">
+      <div class="card-top">
+        <div class="card-icon-wrap">🗂</div>
+        <span class="card-arrow">↗</span>
+      </div>
+      <span class="card-num">04 · Selected Chat</span>
+      <div class="card-title">인덱스 선택 추출 & 재정렬</div>
+      <p class="card-desc">최대 3개 파일에서 원하는 인덱스만 체크박스로 선택하고 드래그로 순서를 재배열해 새 JSON으로 추출합니다.</p>
+      <div class="tag-list">
+        <span class="tag">다중 파일 (최대 3개)</span>
+        <span class="tag">드래그 재정렬</span>
+        <span class="tag">선택 추출</span>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- 비교표 -->
+  <div class="section-label">도구 비교</div>
+  <div class="table-wrap">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>도구</th>
+          <th>주요 목적</th>
+          <th>파일 수</th>
+          <th>편집 방식</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="tname"><span class="dot" style="background:var(--c1)"></span>Inspector</div></td>
+          <td>특정 대화 내용을 찾아 <strong style="color:var(--text)">직접 타이핑 수정</strong></td>
+          <td>1개</td>
+          <td>검색 → 클릭 → 수동 편집</td>
+        </tr>
+        <tr>
+          <td><div class="tname"><span class="dot" style="background:var(--c2)"></span>Replacer</div></td>
+          <td>단어 하나를 <strong style="color:var(--text)">파일 전체에서 일괄 치환</strong>·제거</td>
+          <td>1개</td>
+          <td>Find & Replace (자동 전체)</td>
+        </tr>
+        <tr>
+          <td><div class="tname"><span class="dot" style="background:var(--c3)"></span>Repeat Detector</div></td>
+          <td>AI 반복 루프로 생긴 <strong style="color:var(--text)">중복 문장 자동 탐색</strong>·제거</td>
+          <td>1개</td>
+          <td>자동 감지 → 확인 후 삭제</td>
+        </tr>
+        <tr>
+          <td><div class="tname"><span class="dot" style="background:var(--c4)"></span>Selected Chat</div></td>
+          <td>여러 파일에서 원하는 인덱스만 <strong style="color:var(--text)">골라서 재구성</strong></td>
+          <td>최대 3개</td>
+          <td>체크박스 선택 + 드래그 정렬</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 사용 시나리오 -->
+  <div class="section-label">어떤 도구를 써야 할까?</div>
+  <div class="scenario-grid">
+
+    <div class="scenario-card">
+      <span class="scenario-case" style="color: var(--c1);">Case 01</span>
+      <p class="scenario-text">대화 중 특정 문장을 찾아 내용을 <strong style="color:var(--text)">직접 고쳐야</strong> 할 때</p>
+      <span class="scenario-result" style="color: var(--c1);">→ Inspector 사용</span>
+    </div>
+
+    <div class="scenario-card">
+      <span class="scenario-case" style="color: var(--c2);">Case 02</span>
+      <p class="scenario-text">잘못 쓴 이름·단어가 <strong style="color:var(--text)">파일 전체에 퍼져</strong> 있을 때</p>
+      <span class="scenario-result" style="color: var(--c2);">→ Replacer 사용</span>
+    </div>
+
+    <div class="scenario-card">
+      <span class="scenario-case" style="color: var(--c3);">Case 03</span>
+      <p class="scenario-text">AI가 <strong style="color:var(--text)">같은 문장을 반복 출력</strong>해 컨텍스트가 오염됐을 때</p>
+      <span class="scenario-result" style="color: var(--c3);">→ Repeat Detector 사용</span>
+    </div>
+
+    <div class="scenario-card">
+      <span class="scenario-case" style="color: var(--c4);">Case 04</span>
+      <p class="scenario-text">여러 채팅 파일에서 <strong style="color:var(--text)">좋은 대화만 골라 하나로 합칠</strong> 때</p>
+      <span class="scenario-result" style="color: var(--c4);">→ Selected Chat 사용</span>
+    </div>
+
+  </div>
+
+</main>
+
+<footer>
+  RisuAI JSON Toolkit · 브라우저 로컬 처리 · 데이터 외부 전송 없음
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>JSON 채팅 파일 내용 검색 및 수정 도구</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f4f0;
+  --surface: #ffffff;
+  --surface2: #f9f8f5;
+  --border: #e2e0d8;
+  --border2: #cbc9bf;
+  --text: #1a1917;
+  --text-muted: #6b6860;
+  --text-dim: #a09e97;
+  --accent: #5b47e0;
+  --accent-bg: #eeedfb;
+  --red: #d63b3b;
+  --red-bg: #fdf0f0;
+  --amber: #c47a00;
+  --amber-bg: #fdf5e6;
+  --green: #1e8a4c;
+  --green-bg: #edf7f1;
+  --mono: 'Courier New', monospace;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+}
+
+/* ── 헤더 ── */
+.header { margin-bottom: 24px; }
+.header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; }
+.header p  { font-size: 0.875rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ── 카드 ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 14px;
+}
+
+/* ── 업로드 존 ── */
+.upload-zone {
+  border: 2px dashed var(--border2);
+  border-radius: 10px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.18s;
+  position: relative;
+  background: var(--surface2);
+}
+.upload-zone:hover { border-color: var(--accent); background: var(--accent-bg); }
+.upload-zone.loaded { border-color: var(--green); background: var(--green-bg); }
+.upload-zone.loaded .uz-label { color: var(--green); }
+.upload-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.upload-zone .uz-icon  { font-size: 2rem; display: block; margin-bottom: 8px; }
+.upload-zone .uz-label { font-size: 0.95rem; color: var(--text-muted); }
+.upload-zone .uz-label strong { color: var(--accent); }
+.upload-zone .uz-sub   { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; }
+
+/* ── 상태 메시지 ── */
+#status {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+#status.success { background: var(--green-bg);  color: var(--green); }
+#status.error   { background: var(--red-bg);    color: var(--red); }
+#status.info    { background: var(--accent-bg); color: var(--accent); }
+#status.warning { background: var(--amber-bg);  color: var(--amber); }
+
+/* ── 버튼 ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 9px 16px;
+  border: none; border-radius: 8px;
+  font-size: 0.875rem; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:hover:not(:disabled) { background: #4a38c4; }
+.btn-ghost  { background: var(--surface2); color: var(--text-muted); border: 1.5px solid var(--border); }
+.btn-ghost:hover:not(:disabled)  { background: var(--border); color: var(--text); }
+.btn-green  { background: var(--green-bg); color: var(--green); border: 1.5px solid #b5dfc8; }
+.btn-green:hover:not(:disabled)  { background: #d5eee0; }
+.btn-amber  { background: var(--amber-bg); color: var(--amber); border: 1.5px solid #e8cc99; }
+.btn-amber:hover:not(:disabled)  { background: #f5e6c4; }
+.btn-sm   { padding: 5px 11px; font-size: 0.8rem; border-radius: 6px; }
+.btn-full { width: 100%; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── 검색 행 ── */
+.search-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+#searchInput {
+  flex: 1;
+  min-width: 180px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+#searchInput:focus { border-color: var(--accent); }
+#searchInput::placeholder { color: var(--text-dim); }
+
+/* ── 안내 텍스트 ── */
+.hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+/* ── 검색 결과 래퍼 ── */
+#searchResults {
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  margin-top: 14px;
+}
+.results-empty {
+  padding: 20px 16px;
+  font-size: 0.875rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ── 검색 결과 항목 ── */
+.search-result-item {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover { background: var(--surface2); }
+
+/* ── 항목 헤더 ── */
+.item-header {
+  padding: 12px 16px 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.item-header strong { font-size: 0.9rem; color: var(--text); }
+.item-header .preview {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  display: block;
+  margin-top: 2px;
+}
+.item-header .preview.modified { color: var(--red); font-weight: 600; }
+
+.item-index-info {
+  padding: 0 16px 10px;
+  font-size: 0.775rem;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+
+/* ── 펼침 컨테이너 ── */
+.index-detail-container {
+  display: none;
+  padding: 0 16px 14px;
+  border-top: 1px dashed var(--border);
+  margin-top: 4px;
+}
+
+/* ── contenteditable 편집 영역 ── */
+.index-detail {
+  padding: 12px 14px;
+  background: var(--amber-bg);
+  border: 1.5px solid #e8cc99;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-family: var(--mono);
+  white-space: pre-wrap;
+  word-break: break-all;
+  cursor: text;
+  margin-bottom: 10px;
+  line-height: 1.65;
+  color: var(--text);
+  min-height: 60px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.index-detail:focus {
+  border-color: var(--accent);
+  background: #fdfcff;
+  box-shadow: 0 0 0 3px rgba(91,71,224,0.08);
+}
+
+/* ── 수정 액션 행 ── */
+.modify-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.modification-status {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--green);
+}
+
+/* ── 다운로드 경고 힌트 ── */
+.download-hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 10px;
+}
+
+/* ── 모바일 ── */
+@media (max-width: 540px) {
+  .search-row { flex-direction: column; }
+  #searchInput { min-width: unset; }
+  .btn-full-mobile { width: 100%; }
+  .modify-actions { flex-direction: column; align-items: stretch; }
+  .modify-actions .btn { width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 헤더 -->
+  <div class="header">
+    <h1>💬 JSON 채팅 파일 내용 검색 및 수정 도구</h1>
+    <p>RisuAI 채팅 JSON 파일에서 키워드를 검색하고 내용을 직접 수정합니다.</p>
+  </div>
+
+  <!-- 1. 업로드 -->
+  <div class="card" id="uploadSection">
+    <div class="card-title">① JSON 파일 업로드</div>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept=".json">
+      <span class="uz-icon">📂</span>
+      <div class="uz-label"><strong>클릭하여 파일 선택</strong></div>
+      <div class="uz-sub">RisuAI 채팅 형식 .json 파일</div>
+    </div>
+    <div id="status" class="info">파일을 업로드해주세요.</div>
+  </div>
+
+  <!-- 2. 검색 & 수정 -->
+  <div class="card" id="searchSection" style="display:none;">
+    <div class="card-title">② 키워드 검색 및 수정</div>
+    <p class="hint">키워드로 검색 후 항목 헤더를 클릭해 펼치면 직접 수정할 수 있습니다.<br>수정 후 <strong>[수정 완료 및 반영]</strong> 버튼을 눌러야 메모리에 정확히 저장됩니다. 다운로드 시 펼쳐진 항목은 자동으로 저장됩니다.</p>
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="검색어를 입력하세요 (두 글자 이상)">
+      <button class="btn btn-accent" onclick="searchAndDisplayResults()">🔍 검색</button>
+    </div>
+    <div id="searchResults">
+      <div class="results-empty">검색 결과가 여기에 표시됩니다.</div>
+    </div>
+  </div>
+
+  <!-- 3. 다운로드 -->
+  <div class="card" id="downloadSection" style="display:none;">
+    <div class="card-title">③ 최종 수정본 다운로드</div>
+    <button class="btn btn-green btn-full" onclick="downloadModifiedFile()">⬇️ 수정된 JSON 파일 저장</button>
+    <p class="download-hint">⚠️ 다운로드 시 현재 펼쳐진 항목과 [수정 완료 및 반영]으로 저장된 모든 수정 사항이 최종 JSON에 반영됩니다.</p>
+  </div>
+
+</div>
+
+<script>
+let chatData = null;
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = type || 'info';
+}
+
+/* ── 파일 선택 ── */
+async function handleFileSelect(event) {
+  const files = event.target.files;
+  if (files.length === 0) return;
+  const file = files[0];
+
+  setStatus(`파일 '${file.name}' 읽는 중...`, 'info');
+  chatData = null;
+
+  try {
+    const data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = e => reject(e);
+      reader.readAsText(file);
+    });
+
+    const fullObject = JSON.parse(data);
+    const dataArray = fullObject.data?.message;
+    if (!Array.isArray(dataArray)) throw new Error("JSON이 'data.message' 배열을 포함한 RisuAI 채팅 형식이 아닙니다.");
+
+    chatData = fullObject;
+
+    const zone = document.getElementById('uploadZone');
+    zone.classList.add('loaded');
+    zone.querySelector('.uz-label').innerHTML = `<strong>✅ ${file.name}</strong>`;
+    zone.querySelector('.uz-sub').textContent = `항목 ${dataArray.length}개 로드됨 — 다시 클릭하면 교체됩니다`;
+
+    setStatus(`✅ 파일 로드 완료. (항목: ${dataArray.length}개)`, 'success');
+    document.getElementById('searchSection').style.display = 'block';
+    document.getElementById('downloadSection').style.display = 'block';
+
+  } catch (error) {
+    alert(`'${file.name}' 처리 오류: ${error.message}`);
+    setStatus(`❌ 파일 처리 오류: ${error.message}`, 'error');
+    document.getElementById('searchSection').style.display = 'none';
+    document.getElementById('downloadSection').style.display = 'none';
+  }
+}
+document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+/* ── HTML → 텍스트 변환 (줄 바꿈 보존) ── */
+function convertHtmlToText(htmlContent) {
+  let text = htmlContent;
+  text = text.replace(/<br\s*\/?>/gi, "\n");
+  text = text.replace(/<\/div>\s*<div>/gi, "\n\n");
+  text = text.replace(/<\/p>\s*<p>/gi, "\n\n");
+  text = text.replace(/<div[^>]*>|<\/div>/gi, "\n");
+  text = text.replace(/<p[^>]*>|<\/p>/gi, "\n");
+  text = text.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = text;
+  let final_text = tempDiv.textContent;
+  final_text = final_text.replace(/(\n\s*){3,}/g, '\n\n');
+  return final_text.trim();
+}
+
+/* ── 펼치기/접기 ── */
+function toggleDetail(element, index) {
+  const itemContainer = element.closest('.search-result-item');
+  if (!itemContainer) return;
+  const detailContainer = itemContainer.querySelector('.index-detail-container');
+  if (detailContainer) {
+    detailContainer.style.display = detailContainer.style.display === 'block' ? 'none' : 'block';
+    if (detailContainer.style.display === 'block') {
+      const detailDiv = itemContainer.querySelector('.index-detail');
+      if (detailDiv) detailDiv.focus();
+    }
+  }
+}
+
+/* ── 수정 완료 및 반영 ── */
+function applyModification(buttonElement, index) {
+  if (!chatData || !chatData.data?.message[index]) {
+    alert('데이터 로드 오류: 항목을 찾을 수 없습니다.');
+    return;
+  }
+  const itemContainer = buttonElement.closest('.search-result-item');
+  const detailDiv = itemContainer.querySelector('.index-detail');
+  if (detailDiv) {
+    let fullText = convertHtmlToText(detailDiv.innerHTML);
+    const dataStartIndex = fullText.indexOf("Data:\n");
+    let newContent = dataStartIndex !== -1
+      ? fullText.substring(dataStartIndex + "Data:\n".length).trim()
+      : fullText.trim();
+
+    if (chatData.data.message[index].data !== newContent) {
+      chatData.data.message[index].data = newContent;
+
+      const previewSpan = itemContainer.querySelector('.preview');
+      if (previewSpan) {
+        previewSpan.textContent = newContent.replace(/\n/g, ' ').substring(0, 40) + '...';
+        previewSpan.classList.add('modified');
+      }
+      const statusDiv = itemContainer.querySelector('.modification-status');
+      if (statusDiv) statusDiv.textContent = `✅ Index ${index + 1} 수정 완료 및 반영됨`;
+
+      setStatus(`⭐ Index ${index + 1} 내용이 수정 완료되었습니다.`, 'success');
+    } else {
+      setStatus(`ℹ️ Index ${index + 1}는 수정 사항이 없습니다.`, 'info');
+    }
+  }
+}
+
+/* ── 검색 ── */
+function searchAndDisplayResults() {
+  if (!chatData || !chatData.data?.message) {
+    alert('먼저 JSON 파일을 업로드해주세요.');
+    return;
+  }
+  const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+  const resultsDiv = document.getElementById('searchResults');
+  resultsDiv.innerHTML = '';
+
+  if (searchTerm.length < 2) {
+    setStatus('⚠️ 검색어는 두 글자 이상이어야 합니다.', 'warning');
+    return;
+  }
+
+  setStatus(`🔍 '${searchTerm}' 검색 중...`, 'info');
+
+  const dataArray = chatData.data.message;
+  let totalMatches = 0;
+  let html = '';
+
+  dataArray.forEach((item, index) => {
+    const currentData = item.data || '';
+    const searchTarget = `${currentData} ${item.role || ''}`.toLowerCase();
+    if (!item || !searchTarget.includes(searchTerm)) return;
+
+    totalMatches++;
+    const contentPreview = currentData.trim().replace(/\n/g, ' ').substring(0, 40) + '...';
+    const displayData = currentData.replace(/\n/g, '<br>');
+    const fullContentHtml = `Role: ${item.role || 'N/A'}<br>Data:<br>${displayData || '[내용 없음]'}`;
+    const timeStr = item.time ? new Date(item.time).toLocaleTimeString('ko-KR') : 'N/A';
+
+    html += `
+    <div class="search-result-item" data-index="${index}">
+      <div class="item-header" onclick="toggleDetail(this, ${index})">
+        <strong>${index + 1} index</strong>
+        <span class="preview">${contentPreview}</span>
+      </div>
+      <div class="item-index-info">Role: ${item.role || 'N/A'} &nbsp;·&nbsp; Time: ${timeStr}</div>
+      <div class="index-detail-container">
+        <div class="index-detail" contenteditable="true">${fullContentHtml}</div>
+        <div class="modify-actions">
+          <button class="btn btn-amber btn-sm" onclick="applyModification(this, ${index})">✏️ 수정 완료 및 반영</button>
+          <div class="modification-status"></div>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  if (html) {
+    resultsDiv.innerHTML = html;
+    setStatus(`✅ 총 ${totalMatches}개의 검색 결과 — 항목 헤더를 클릭하여 펼치고 수정하세요.`, 'success');
+  } else {
+    resultsDiv.innerHTML = `<div class="results-empty">❌ '${searchTerm}'에 대한 검색 결과가 없습니다.</div>`;
+    setStatus(`❌ '${searchTerm}' 검색 결과 없음`, 'error');
+  }
+}
+
+/* ── 다운로드 ── */
+function downloadModifiedFile() {
+  if (!chatData || !chatData.data?.message) {
+    alert('다운로드할 파일이 로드되지 않았거나 유효한 내용이 없습니다.');
+    return;
+  }
+
+  let autoSavedCount = 0;
+  document.querySelectorAll('.search-result-item').forEach(itemDiv => {
+    const detailContainer = itemDiv.querySelector('.index-detail-container');
+    if (detailContainer && detailContainer.style.display === 'block') {
+      const index = parseInt(itemDiv.dataset.index);
+      const detailDiv = itemDiv.querySelector('.index-detail');
+      if (detailDiv) {
+        let fullText = convertHtmlToText(detailDiv.innerHTML);
+        const dataStartIndex = fullText.indexOf("Data:\n");
+        let newContent = dataStartIndex !== -1
+          ? fullText.substring(dataStartIndex + "Data:\n".length).trim()
+          : fullText.trim();
+        if (chatData.data.message[index].data !== newContent) {
+          chatData.data.message[index].data = newContent;
+          autoSavedCount++;
+        }
+      }
+    }
+  });
+
+  setStatus(`⭐ 다운로드 전 ${autoSavedCount}개 항목의 수정 사항이 자동으로 저장되었습니다.`, 'info');
+
+  try {
+    const jsonContent = JSON.stringify(chatData, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const originalFileName = document.getElementById('fileInput').files[0]?.name.replace(/\.json$/i, '') || 'modified_chat';
+    a.download = `${originalFileName}_modified.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setStatus(`✅ 수정된 파일이 다운로드되었습니다. (${a.download})`, 'success');
+  } catch (e) {
+    alert(`⚠️ 다운로드 오류: ${e.message}`);
+  }
+}
+</script>
+</body>
+</html>

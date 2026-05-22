@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>JSON 단어 치환 및 삭제 도구</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #f5f4f0;
+            --surface: #ffffff;
+            --surface2: #f9f8f5;
+            --border: #e2e0d8;
+            --border2: #cbc9bf;
+            --text: #1a1917;
+            --text-muted: #6b6860;
+            --text-dim: #a09e97;
+            --accent: #5b47e0;
+            --accent-bg: #eeedfb;
+            --red: #d63b3b;
+            --red-bg: #fdf0f0;
+            --amber: #c47a00;
+            --amber-bg: #fdf5e6;
+            --green: #1e8a4c;
+            --green-bg: #edf7f1;
+            --mono: 'Courier New', monospace;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .page {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 24px 16px 80px;
+        }
+
+        /* ── 헤더 ── */
+        .header { margin-bottom: 24px; }
+        .header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; }
+        .header p { font-size: 0.875rem; color: var(--text-muted); margin-top: 4px; }
+
+        /* ── 카드 ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 14px;
+        }
+
+        /* ── 업로드 존 ── */
+        .upload-zone {
+            border: 2px dashed var(--border2);
+            border-radius: 10px;
+            padding: 28px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.18s;
+            position: relative;
+            background: var(--surface2);
+        }
+        .upload-zone:hover {
+            border-color: var(--accent);
+            background: var(--accent-bg);
+        }
+        .upload-zone input[type="file"] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+        }
+        .upload-zone .icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+        .upload-zone .label { font-size: 0.95rem; color: var(--text-muted); }
+        .upload-zone .label strong { color: var(--accent); }
+        .upload-zone .sub { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; }
+        .upload-zone.loaded { border-color: var(--green); background: var(--green-bg); }
+        .upload-zone.loaded .label { color: var(--green); }
+
+        /* ── 입력 행 ── */
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            min-width: 140px;
+        }
+        .input-group label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            background: var(--surface2);
+            border: 1.5px solid var(--border);
+            border-radius: 7px;
+            color: var(--text);
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.15s;
+            font-family: inherit;
+        }
+        input[type="text"]:focus { border-color: var(--accent); }
+        input[type="text"]::placeholder { color: var(--text-dim); }
+
+        /* ── 버튼 ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 9px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+        .btn-accent { background: var(--accent); color: #fff; }
+        .btn-accent:hover:not(:disabled) { background: #4a38c4; }
+        .btn-ghost { background: var(--surface2); color: var(--text-muted); border: 1.5px solid var(--border); }
+        .btn-ghost:hover:not(:disabled) { background: var(--border); color: var(--text); }
+        .btn-green { background: var(--green-bg); color: var(--green); border: 1.5px solid #b5dfc8; }
+        .btn-green:hover:not(:disabled) { background: #d5eee0; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-full { width: 100%; }
+
+        /* ── 검색 결과 카운트 ── */
+        .search-count {
+            display: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--accent);
+            padding: 8px 12px;
+            background: var(--accent-bg);
+            border-radius: 7px;
+            margin-top: 12px;
+        }
+
+        /* ── 힌트 텍스트 ── */
+        .hint {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 10px;
+        }
+
+        /* ── 상태 메시지 ── */
+        #statusMessage {
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-top: 4px;
+            display: none;
+        }
+        #statusMessage.success { background: var(--green-bg); color: var(--green); }
+        #statusMessage.error   { background: var(--red-bg);   color: var(--red); }
+        #statusMessage.info    { background: var(--accent-bg); color: var(--accent); }
+
+        /* ── JSON 디스플레이 ── */
+        .json-display-wrapper {
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .json-display-bar {
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-family: var(--mono);
+        }
+        #jsonDisplay {
+            width: 100%;
+            height: 280px;
+            padding: 12px;
+            overflow: auto;
+            background: var(--surface);
+            white-space: pre;
+            font-family: var(--mono);
+            font-size: 0.82rem;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        /* ── 형광펜 ── */
+        mark {
+            background-color: #f1c40f;
+            color: var(--text);
+            padding: 0 2px;
+            border-radius: 3px;
+        }
+
+        /* ── Details/Summary (인덱스 접기/펴기) ── */
+        details {
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+        summary {
+            padding: 11px 14px;
+            background: var(--surface2);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+            transition: background 0.12s;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary:hover { background: var(--border); }
+        summary .arrow { margin-left: auto; font-size: 0.75rem; transition: transform 0.18s; }
+        details[open] summary .arrow { transform: rotate(180deg); }
+
+        /* ── 인덱스 항목 ── */
+        #searchResultList { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+
+        .index-item {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .index-title {
+            padding: 6px 12px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.775rem;
+            color: var(--text-muted);
+            font-family: var(--mono);
+        }
+        .index-content {
+            padding: 8px 12px;
+            font-family: var(--mono);
+            white-space: pre-wrap;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+
+        /* ── 모바일 ── */
+        @media (max-width: 540px) {
+            .input-row { flex-direction: column; align-items: stretch; }
+            .input-group { min-width: unset; }
+            .btn { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="page">
+    <div class="header">
+        <h1>💬 JSON 단어 치환 및 삭제 도구</h1>
+        <p>JSON 파일에서 특정 단어를 검색하고, 일괄 치환하거나 삭제할 수 있습니다.</p>
+    </div>
+
+    <!-- 1. 파일 업로드 -->
+    <div class="card">
+        <div class="card-title">① JSON 파일 업로드</div>
+        <div class="upload-zone" id="uploadZone">
+            <input type="file" id="fileInput" accept=".json">
+            <span class="icon">📂</span>
+            <div class="label"><strong>클릭하여 파일 선택</strong></div>
+            <div class="sub">.json 파일만 지원됩니다</div>
+        </div>
+    </div>
+
+    <!-- 2. 단어 검색 -->
+    <div class="card">
+        <div class="card-title">② 단어 검색 및 인덱스 추출</div>
+        <div class="input-row">
+            <div class="input-group">
+                <label for="findWord">검색할 단어</label>
+                <input type="text" id="findWord" placeholder="찾을 단어 입력">
+            </div>
+            <button class="btn btn-accent" onclick="searchWord()" id="searchButton" disabled>🔍 검색 및 인덱스 추출</button>
+        </div>
+        <div class="search-count" id="searchCount"></div>
+        <div id="searchResultContainer"></div>
+    </div>
+
+    <!-- 3. 치환 / 삭제 -->
+    <div class="card">
+        <div class="card-title">③ 단어 치환 또는 삭제</div>
+        <div class="input-row">
+            <div class="input-group">
+                <label for="replaceWord">바꿀 단어 <span style="color:var(--text-dim);font-weight:400;">(비워두면 삭제)</span></label>
+                <input type="text" id="replaceWord" placeholder="바꿀 단어 입력 (삭제 시 빈칸)">
+            </div>
+            <button class="btn btn-accent" onclick="replaceAndDisplay()" id="replaceButton" disabled>⚡ 치환 / 삭제 실행</button>
+        </div>
+        <p class="hint">바꿀 단어를 비워두면 검색어가 완전히 삭제됩니다.</p>
+    </div>
+
+    <!-- 4. JSON 미리보기 -->
+    <div class="card">
+        <div class="card-title">④ 수정된 JSON 내용 미리보기</div>
+        <div class="json-display-wrapper">
+            <div class="json-display-bar">output.json</div>
+            <div id="jsonDisplay">JSON 파일을 업로드해주세요.</div>
+        </div>
+    </div>
+
+    <!-- 5. 다운로드 -->
+    <div class="card">
+        <div class="card-title">⑤ 수정된 파일 다운로드</div>
+        <button class="btn btn-green btn-full" onclick="downloadJsonFile()" id="downloadButton" disabled>⬇️ 수정된 JSON 파일 다운로드</button>
+    </div>
+
+    <div id="statusMessage"></div>
+</div>
+
+<script>
+    let currentJsonObject = null;
+    let replacementCount = 0;
+
+    function setStatus(msg, type) {
+        const el = document.getElementById('statusMessage');
+        el.textContent = msg;
+        el.className = type; // 'success' | 'error' | 'info'
+        el.style.display = msg ? 'block' : 'none';
+    }
+
+    function updateButtonStates() {
+        const isLoaded = currentJsonObject !== null;
+        document.getElementById('searchButton').disabled = !isLoaded;
+        document.getElementById('replaceButton').disabled = !isLoaded;
+        document.getElementById('downloadButton').disabled = !isLoaded;
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const jsonText = e.target.result;
+                currentJsonObject = JSON.parse(jsonText);
+
+                const formattedText = JSON.stringify(currentJsonObject, null, 2);
+                document.getElementById('jsonDisplay').textContent = formattedText;
+                document.getElementById('jsonDisplay').style.color = '';
+
+                const zone = document.getElementById('uploadZone');
+                zone.classList.add('loaded');
+                zone.querySelector('.label').innerHTML = `<strong>✅ ${file.name}</strong>`;
+                zone.querySelector('.sub').textContent = '파일 로드 완료 — 다시 클릭하면 교체됩니다';
+
+                setStatus('✅ JSON 파일 로드 성공. 검색을 시작하세요.', 'success');
+                document.getElementById('searchCount').style.display = 'none';
+                document.getElementById('searchResultContainer').innerHTML = '';
+                updateButtonStates();
+            } catch (error) {
+                setStatus('⚠️ 파일 로드 오류: 유효한 JSON 형식이 아닙니다.', 'error');
+                document.getElementById('jsonDisplay').textContent = 'JSON 파일을 업로드해주세요.';
+                currentJsonObject = null;
+                updateButtonStates();
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    function searchAndExtract(data, find, results, currentPath = '') {
+        const regex = new RegExp(find, 'g');
+        if (typeof data === 'string') {
+            if (data.match(regex)) results.push({ path: currentPath, content: data });
+        } else if (Array.isArray(data)) {
+            data.forEach((item, index) => searchAndExtract(item, find, results, `${currentPath}[${index}]`));
+        } else if (typeof data === 'object' && data !== null) {
+            for (const key in data) {
+                if (data.hasOwnProperty(key)) searchAndExtract(data[key], find, results, `${currentPath}.${key}`);
+            }
+        }
+    }
+
+    function searchWord() {
+        if (!currentJsonObject) { setStatus('⚠️ 먼저 JSON 파일을 업로드해주세요.', 'error'); return; }
+        const findWord = document.getElementById('findWord').value.trim();
+        if (!findWord) { setStatus('⚠️ 검색할 단어를 입력해주세요.', 'error'); return; }
+
+        const results = [];
+        searchAndExtract(currentJsonObject, findWord, results);
+        const totalCount = results.length;
+
+        const countEl = document.getElementById('searchCount');
+        countEl.textContent = `🔍 "${findWord}" 검색 결과 — ${totalCount}개 항목에서 발견`;
+        countEl.style.display = 'block';
+        setStatus('🔍 단어 검색 및 인덱스 추출 완료.', 'info');
+
+        const container = document.getElementById('searchResultContainer');
+        container.innerHTML = '';
+
+        if (totalCount > 0) {
+            const detailsElement = document.createElement('details');
+
+            const summaryElement = document.createElement('summary');
+            summaryElement.innerHTML = `총 ${totalCount}개 항목의 상세 경로 및 내용 <span class="arrow">▼</span>`;
+
+            const resultListDiv = document.createElement('div');
+            resultListDiv.id = 'searchResultList';
+
+            results.forEach((item, idx) => {
+                const indexItem = document.createElement('div');
+                indexItem.className = 'index-item';
+
+                const pathDisplay = item.path.replace(/^\./, '');
+                const regex = new RegExp(findWord, 'g');
+                const highlightedContent = item.content.replace(regex, `<mark>${findWord}</mark>`);
+
+                indexItem.innerHTML = `
+                    <div class="index-title">항목 ${idx + 1} / 경로: ${pathDisplay}</div>
+                    <div class="index-content">${highlightedContent}</div>
+                `;
+                resultListDiv.appendChild(indexItem);
+            });
+
+            detailsElement.appendChild(summaryElement);
+            detailsElement.appendChild(resultListDiv);
+            container.appendChild(detailsElement);
+        } else {
+            container.innerHTML = `<p style="font-size:0.875rem;color:var(--text-dim);padding:8px 0;">검색된 항목이 없습니다.</p>`;
+        }
+
+        highlightDisplayContent(currentJsonObject, findWord, findWord);
+    }
+
+    function deepReplace(data, find, replace, countObj) {
+        if (typeof data === 'string') {
+            if (!find) return data;
+            const actualReplace = replace || '';
+            const regex = new RegExp(find, 'g');
+            const matches = data.match(regex);
+            if (matches) countObj.count += matches.length;
+            return data.replace(regex, actualReplace);
+        } else if (Array.isArray(data)) {
+            return data.map(item => deepReplace(item, find, replace, countObj));
+        } else if (typeof data === 'object' && data !== null) {
+            const newObject = {};
+            for (const key in data) newObject[key] = deepReplace(data[key], find, replace, countObj);
+            return newObject;
+        }
+        return data;
+    }
+
+    function highlightDisplayContent(jsonObject, find, replace) {
+        let displayJsonText = JSON.stringify(jsonObject, null, 2);
+        const highlightTarget = replace || find;
+
+        const escapedText = displayJsonText
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        const regex = new RegExp(highlightTarget, 'g');
+        const highlightedText = escapedText.replace(regex, `<mark>${highlightTarget}</mark>`);
+        document.getElementById('jsonDisplay').innerHTML = highlightedText;
+    }
+
+    function replaceAndDisplay() {
+        if (!currentJsonObject) { setStatus('⚠️ 먼저 JSON 파일을 업로드해주세요.', 'error'); return; }
+
+        const findWord = document.getElementById('findWord').value.trim();
+        const replaceWord = document.getElementById('replaceWord').value.trim();
+        if (!findWord) { setStatus('⚠️ 검색할 단어를 입력해주세요.', 'error'); return; }
+
+        try {
+            const countObj = { count: 0 };
+            const modifiedObjectForDownload = deepReplace(
+                JSON.parse(JSON.stringify(currentJsonObject)),
+                findWord, replaceWord, countObj
+            );
+
+            currentJsonObject = modifiedObjectForDownload;
+            const count = countObj.count;
+
+            const displayTarget = replaceWord || findWord;
+            highlightDisplayContent(currentJsonObject, findWord, displayTarget);
+
+            const actionType = replaceWord ? '치환' : '삭제';
+            const statusMsg = replaceWord
+                ? `✅ 치환 완료: "${findWord}" → "${replaceWord}", 총 ${count}개 처리됨`
+                : `✅ 삭제 완료: "${findWord}" 총 ${count}개 처리됨`;
+            setStatus(statusMsg, 'success');
+
+            const countEl = document.getElementById('searchCount');
+            countEl.textContent = `✅ ${actionType} 완료 — 총 ${count}개 변경됨`;
+            countEl.style.display = 'block';
+
+            document.getElementById('searchResultContainer').innerHTML =
+                `<p style="font-size:0.875rem;color:var(--text-dim);padding:8px 0;">업데이트된 인덱스를 확인하려면 '단어 검색'을 다시 눌러주세요.</p>`;
+        } catch (error) {
+            setStatus('❌ 처리 중 오류 발생: ' + error.message, 'error');
+            console.error(error);
+        }
+    }
+
+    function downloadJsonFile() {
+        if (!currentJsonObject) { setStatus('⚠️ 다운로드할 내용이 없습니다.', 'error'); return; }
+
+        const jsonText = JSON.stringify(currentJsonObject, null, 2);
+        const blob = new Blob([jsonText], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'modified_chat.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setStatus('⬇️ 파일 다운로드 완료: modified_chat.json', 'success');
+    }
+</script>
+
+</body>
+</html>
