@@ -299,6 +299,10 @@ body {
   #searchInput { min-width: unset; width: 100%; }
   .selection-column { width: 260px; }
 }
+
+.home-link { display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; color:var(--text-muted); text-decoration:none; margin-bottom:10px; padding:4px 0; }
+.home-link:hover { color:var(--accent); }
+.home-link svg { width:14px; height:14px; }
 </style>
 </head>
 <body>
@@ -306,6 +310,7 @@ body {
 
   <!-- 헤더 -->
   <div class="header">
+    <a href="index.html" class="home-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/></svg> 홈으로</a>
     <h1>🗂 JSON 인덱스 선택 추출 및 순서 정리 도구</h1>
     <p>RisuAI 채팅 JSON 파일에서 인덱스를 선택·재정렬하여 추출합니다. (최대 3개 파일)</p>
   </div>

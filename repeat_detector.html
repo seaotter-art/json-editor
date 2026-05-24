@@ -323,12 +323,17 @@ mark.hl { background: #fde68a; border-radius: 2px; color: #92400e; }
 }
 .dl-bar-inner { max-width: 780px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
 .dl-bar .info { font-size: 0.825rem; color: var(--text-muted); flex: 1; }
+
+.home-link { display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; color:var(--text-muted); text-decoration:none; margin-bottom:10px; padding:4px 0; }
+.home-link:hover { color:var(--accent); }
+.home-link svg { width:14px; height:14px; }
 </style>
 </head>
 <body>
 <div class="page">
 
 <div class="header">
+  <a href="index.html" class="home-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/></svg> 홈으로</a>
   <h1>🔍 반복 출력 감지 도구</h1>
   <p>반복 출력으로 오염된 채팅 컨텍스트를 정리합니다</p>
 </div>

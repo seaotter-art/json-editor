@@ -256,6 +256,10 @@ body {
   .modify-actions { flex-direction: column; align-items: stretch; }
   .modify-actions .btn { width: 100%; }
 }
+
+.home-link { display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; color:var(--text-muted); text-decoration:none; margin-bottom:10px; padding:4px 0; }
+.home-link:hover { color:var(--accent); }
+.home-link svg { width:14px; height:14px; }
 </style>
 </head>
 <body>
@@ -263,6 +267,7 @@ body {
 
   <!-- 헤더 -->
   <div class="header">
+    <a href="index.html" class="home-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/></svg> 홈으로</a>
     <h1>💬 JSON 채팅 파일 내용 검색 및 수정 도구</h1>
     <p>RisuAI 채팅 JSON 파일에서 키워드를 검색하고 내용을 직접 수정합니다.</p>
   </div>
