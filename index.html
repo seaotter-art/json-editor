@@ -23,11 +23,13 @@
   --c2: #d97706;   /* 주황 — replacer */
   --c3: #7c3aed;   /* 보라 — repeat detector */
   --c4: #059669;   /* 초록 — selected chat */
+  --c5: #db2777;   /* 핑크 — context calculator */
 
   --c1-bg: #eff6ff;
   --c2-bg: #fffbeb;
   --c3-bg: #f5f3ff;
   --c4-bg: #ecfdf5;
+  --c5-bg: #fdf2f8;
 
   --sans: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -228,6 +230,7 @@ main {
 .card-2 { --card-color: var(--c2); --card-bg: var(--c2-bg); }
 .card-3 { --card-color: var(--c3); --card-bg: var(--c3-bg); }
 .card-4 { --card-color: var(--c4); --card-bg: var(--c4-bg); }
+.card-5 { --card-color: var(--c5); --card-bg: var(--c5-bg); }
 
 /* ── 비교표 섹션 ── */
 .table-wrap {
@@ -344,6 +347,12 @@ header { animation: fadeUp 0.4s ease both; }
 .tool-card:nth-child(2) { animation-delay: 0.22s; }
 .tool-card:nth-child(3) { animation-delay: 0.29s; }
 .tool-card:nth-child(4) { animation-delay: 0.36s; }
+.tool-card:nth-child(5) { animation-delay: 0.43s; }
+
+/* 5번 카드 전체 너비 */
+.grid .tool-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
 
 /* ── 반응형 ── */
 @media (max-width: 640px) {
@@ -431,6 +440,21 @@ header { animation: fadeUp 0.4s ease both; }
       </div>
     </a>
 
+    <a class="tool-card card-5" href="context_calculator.html">
+      <div class="card-top">
+        <div class="card-icon-wrap">📊</div>
+        <span class="card-arrow">↗</span>
+      </div>
+      <span class="card-num">05 · Context Calculator</span>
+      <div class="card-title">컨텍스트 사용량 계산 & 분할</div>
+      <p class="card-desc">현재 사용된 토큰과 최대 컨텍스트를 입력하면 사용률을 계산하고, 초과 시 메시지를 <strong>과거백업 / 새시작</strong> 두 파일로 분할 다운로드합니다.</p>
+      <div class="tag-list">
+        <span class="tag">토큰 사용률 계산</span>
+        <span class="tag">초과 시 분할 다운로드</span>
+        <span class="tag">파일 1개</span>
+      </div>
+    </a>
+
   </div>
 
   <!-- 비교표 -->
@@ -470,6 +494,12 @@ header { animation: fadeUp 0.4s ease both; }
           <td>최대 3개</td>
           <td>체크박스 선택 + 드래그 정렬</td>
         </tr>
+        <tr>
+          <td><div class="tname"><span class="dot" style="background:var(--c5)"></span>Context Calculator</div></td>
+          <td>토큰 사용률 확인 후 초과 시 <strong style="color:var(--text)">과거백업·새시작으로 분할</strong></td>
+          <td>1개</td>
+          <td>토큰 입력 → 자동 계산 → 분할 다운로드</td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -500,6 +530,12 @@ header { animation: fadeUp 0.4s ease both; }
       <span class="scenario-case" style="color: var(--c4);">Case 04</span>
       <p class="scenario-text">여러 채팅 파일에서 <strong style="color:var(--text)">좋은 대화만 골라 하나로 합칠</strong> 때</p>
       <span class="scenario-result" style="color: var(--c4);">→ Selected Chat 사용</span>
+    </div>
+
+    <div class="scenario-card">
+      <span class="scenario-case" style="color: var(--c5);">Case 05</span>
+      <p class="scenario-text">토큰이 <strong style="color:var(--text)">컨텍스트 한도를 초과</strong>해 채팅을 두 파일로 나눠야 할 때</p>
+      <span class="scenario-result" style="color: var(--c5);">→ Context Calculator 사용</span>
     </div>
 
   </div>
