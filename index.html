@@ -19,11 +19,11 @@
   --text-muted: #636368;
   --text-dim: #adadb5;
 
-  --c1: #2563eb;   /* 파랑 — inspector */
-  --c2: #d97706;   /* 주황 — replacer */
-  --c3: #7c3aed;   /* 보라 — repeat detector */
-  --c4: #059669;   /* 초록 — selected chat */
-  --c5: #db2777;   /* 핑크 — context calculator */
+  --c1: #2563eb;
+  --c2: #d97706;
+  --c3: #7c3aed;
+  --c4: #059669;
+  --c5: #db2777;
 
   --c1-bg: #eff6ff;
   --c2-bg: #fffbeb;
@@ -45,7 +45,6 @@ body {
   line-height: 1.6;
 }
 
-/* ── 헤더 ── */
 header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -101,14 +100,12 @@ h1 {
   background: #22c55e;
 }
 
-/* ── 메인 레이아웃 ── */
 main {
   max-width: 880px;
   margin: 0 auto;
   padding: 40px 20px 80px;
 }
 
-/* ── 섹션 라벨 ── */
 .section-label {
   font-size: 0.72rem;
   font-weight: 600;
@@ -118,7 +115,6 @@ main {
   margin-bottom: 16px;
 }
 
-/* ── 카드 그리드 ── */
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -126,7 +122,6 @@ main {
   margin-bottom: 48px;
 }
 
-/* ── 툴 카드 ── */
 .tool-card {
   position: relative;
   background: var(--surface);
@@ -152,7 +147,6 @@ main {
   transform: translate(2px, -2px);
 }
 
-/* 상단 행: 아이콘 + 화살표 */
 .card-top {
   display: flex;
   align-items: flex-start;
@@ -179,7 +173,6 @@ main {
   padding-top: 2px;
 }
 
-/* 번호 뱃지 */
 .card-num {
   font-size: 0.68rem;
   font-weight: 600;
@@ -207,7 +200,6 @@ main {
   flex: 1;
 }
 
-/* ── 태그 ── */
 .tag-list {
   display: flex;
   flex-wrap: wrap;
@@ -225,14 +217,12 @@ main {
   border: 1px solid color-mix(in srgb, var(--card-color) 20%, transparent);
 }
 
-/* 각 카드 색상 */
 .card-1 { --card-color: var(--c1); --card-bg: var(--c1-bg); }
 .card-2 { --card-color: var(--c2); --card-bg: var(--c2-bg); }
 .card-3 { --card-color: var(--c3); --card-bg: var(--c3-bg); }
 .card-4 { --card-color: var(--c4); --card-bg: var(--c4-bg); }
 .card-5 { --card-color: var(--c5); --card-bg: var(--c5-bg); }
 
-/* ── 비교표 섹션 ── */
 .table-wrap {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -285,7 +275,6 @@ main {
   flex-shrink: 0;
 }
 
-/* ── 시나리오 카드 ── */
 .scenario-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -321,7 +310,6 @@ main {
   margin-top: 4px;
 }
 
-/* ── 푸터 ── */
 footer {
   border-top: 1px solid var(--border);
   text-align: center;
@@ -331,7 +319,6 @@ footer {
   background: var(--surface);
 }
 
-/* ── 애니메이션 ── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -349,12 +336,10 @@ header { animation: fadeUp 0.4s ease both; }
 .tool-card:nth-child(4) { animation-delay: 0.36s; }
 .tool-card:nth-child(5) { animation-delay: 0.43s; }
 
-/* 5번 카드 전체 너비 */
 .grid .tool-card:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
 
-/* ── 반응형 ── */
 @media (max-width: 640px) {
   .grid { grid-template-columns: 1fr; }
   .scenario-grid { grid-template-columns: 1fr; }
@@ -366,7 +351,6 @@ header { animation: fadeUp 0.4s ease both; }
 </head>
 <body>
 
-<!-- 헤더 -->
 <header>
   <div class="badge">RisuAI JSON Toolkit</div>
   <h1>채팅 JSON 파일 편집 도구 모음</h1>
@@ -376,7 +360,6 @@ header { animation: fadeUp 0.4s ease both; }
 
 <main>
 
-  <!-- 도구 카드 -->
   <div class="section-label" style="margin-bottom:14px;">도구 선택</div>
   <div class="grid">
 
@@ -442,16 +425,17 @@ header { animation: fadeUp 0.4s ease both; }
 
     <a class="tool-card card-5" href="context_calculator.html">
       <div class="card-top">
-        <div class="card-icon-wrap">📊</div>
+        <div class="card-icon-wrap">📦</div>
         <span class="card-arrow">↗</span>
       </div>
       <span class="card-num">05 · Context Calculator</span>
       <div class="card-title">토큰 사용량 계산 & 이삿짐 싸기</div>
-      <p class="card-desc">현재 사용된 토큰과 최대 컨텍스트를 입력하면 사용률을 계산하고, 초과 시 메시지를 <strong>과거백업 / 새시작</strong> 두 파일로 분할 다운로드합니다.</p>
+      <p class="card-desc">현재 사용된 토큰과 최대 컨텍스트를 입력하면 사용률을 계산하고, 초과 시 메시지를 <strong>과거백업 / 새시작</strong> 두 파일로 분할 다운로드합니다. 새시작에 앞 메시지를 N개 이어 붙이는 오버랩 옵션도 지원합니다.</p>
       <div class="tag-list">
         <span class="tag">토큰 사용률 계산</span>
         <span class="tag">이삿짐 싸기</span>
         <span class="tag">분할 다운로드</span>
+        <span class="tag">오버랩 옵션</span>
       </div>
     </a>
 
@@ -498,7 +482,7 @@ header { animation: fadeUp 0.4s ease both; }
           <td><div class="tname"><span class="dot" style="background:var(--c5)"></span>Context Calculator</div></td>
           <td>토큰 사용률 확인 후 초과 시 <strong style="color:var(--text)">과거백업·새시작으로 분할</strong></td>
           <td>1개</td>
-          <td>토큰 입력 → 자동 계산 → 분할 다운로드</td>
+          <td>토큰 입력 → 자동 계산 → 분할 다운로드 (오버랩 옵션)</td>
         </tr>
       </tbody>
     </table>
