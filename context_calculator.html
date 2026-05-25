@@ -474,6 +474,19 @@ tr.keep td:first-child { font-weight: 700; font-family: var(--mono); }
 .dl-btn.dl-archive { background: var(--navy); color: #fff; }
 .dl-btn.dl-fresh   { background: var(--yellow); color: #0f1e30; }
 
+/* ── 홈 버튼 ── */
+.home-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 0.78rem; font-weight: 600;
+  margin-bottom: 10px;
+  padding: 4px 0;
+  transition: color 0.12s;
+}
+.home-btn:hover { color: var(--navy); }
+.home-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
 /* ── 알림 배너 ── */
 #cc-notif {
   position: fixed;
@@ -502,10 +515,15 @@ tr.keep td:first-child { font-weight: 700; font-family: var(--mono); }
 <body>
 <div class="wrap">
 
+  <a href="index.html" class="home-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/></svg>
+    홈으로
+  </a>
+
   <!-- 페이지 헤더 -->
   <div class="page-header">
     <div class="page-header-inner">
-      <div class="page-title">📦 이삿짐 센터</div>
+      <div class="page-title">📦 Context Calculator</div>
       <div class="page-sub">컨텍스트 초과 시 채팅 이사 — 과거백업 / 새시작 파일 분리</div>
     </div>
   </div>
@@ -726,9 +744,11 @@ function checkReady() {
 document.getElementById('runBtn').addEventListener('click', () => {
   const max      = parseInt(document.getElementById('maxCtx').value) || 150000;
   const overflow = tokenTotal - max;
-  const pct      = (tokenTotal / max * 100).toFixed(1);
+  const pctNum   = tokenTotal / max * 100;
+  const pct      = pctNum.toFixed(1);
   const isOver   = overflow > 0;
-  const isWarn   = !isOver && tokenTotal / max > 0.8;
+  const isNear   = !isOver && pctNum >= 90;   // 90~100% : 다운로드 허용
+  const isWarn   = !isOver && !isNear && pctNum > 80; // 80~90% : 경고만
 
   document.getElementById('statGrid').innerHTML = `
     <div class="stat-box">
@@ -771,19 +791,21 @@ document.getElementById('runBtn').addEventListener('click', () => {
   const hasExactTokens = messages.some(m => m.generationInfo?.inputTokens != null);
 
   let deleteFrom = messages.length;
-  if (isOver) {
-    const tokensNeeded = overflow * 1.20;
+  if (isOver || isNear) {
+    const target = isOver ? overflow * 1.20 : tokenTotal * 0.5; // 90%대: 절반 기준으로 분기
+    const tokensNeeded = isOver ? overflow * 1.20 : (pctNum - 80) / pctNum * tokenTotal * 1.5;
     let freed = 0;
     for (let i = messages.length - 1; i >= 0; i--) {
       freed += msgTokens[i];
       if (freed >= tokensNeeded) { deleteFrom = i; break; }
     }
+    if (!isOver) deleteFrom = Math.ceil(messages.length / 2); // 미초과 시 절반 기준
   }
   currentDeleteFrom = deleteFrom;
 
   /* 가이드 박스 */
   const guideEl = document.getElementById('guide');
-  if (!isOver) {
+  if (!isOver && !isNear) {
     guideEl.className = 'guide ' + (isWarn ? 'warn' : 'safe');
     guideEl.innerHTML = `<h4>${isWarn ? '⚠ 곧 정리가 필요합니다' : '✓ 컨텍스트 여유 있음'}</h4>
       남은 여유: <code>${(max-tokenTotal).toLocaleString()} tokens</code><br>
@@ -792,6 +814,20 @@ document.getElementById('runBtn').addEventListener('click', () => {
       ${isWarn ? '80%를 초과했습니다. 다음 대화 전에 정리를 고려하세요.' : '아직 삭제할 필요 없습니다.'}`;
     document.getElementById('msgSection').style.display = 'none';
     document.getElementById('dlSection').style.display  = 'none';
+  } else if (isNear && !isOver) {
+    const keepCount = deleteFrom;
+    const delCount  = messages.length - deleteFrom;
+    guideEl.className = 'guide warn';
+    guideEl.innerHTML = `<h4>⚠ 90% 이상 — 지금 이삿짐 싸기 권장</h4>
+      남은 여유: <code>${(max-tokenTotal).toLocaleString()} tokens</code><br>
+      전체 메시지: <code>${messages.length}개</code><br><br>
+      🗂 <strong>과거백업:</strong> index <code>1 ~ ${keepCount}</code> · <code>${keepCount}개</code><br>
+      🏠 <strong>새시작:</strong> index <code>${keepCount + 1} ~ ${messages.length}</code> · <code>${delCount}개</code><br><br>
+      <span style="font-size:0.74rem;opacity:0.65">※ 아직 초과 전이나 여유가 얼마 남지 않았습니다. 미리 분리를 권장합니다.</span>`;
+    document.getElementById('msgSection').style.display = 'none';
+    document.getElementById('dlKeepLabel').textContent  = `index 1 ~ ${keepCount} · 총 ${keepCount}개`;
+    document.getElementById('dlDelLabel').textContent   = `index ${keepCount+1} ~ ${messages.length} · 총 ${delCount}개`;
+    document.getElementById('dlSection').style.display  = 'block';
   } else {
     const keepCount = deleteFrom;
     const delCount  = messages.length - deleteFrom;
